@@ -3,8 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, DateTime, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.database import Base
@@ -13,7 +12,7 @@ from backend.app.db.database import Base
 class Endpoint(Base):
     __tablename__ = "endpoints"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     target_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     signing_secret: Mapped[str] = mapped_column(String(128), nullable=False)

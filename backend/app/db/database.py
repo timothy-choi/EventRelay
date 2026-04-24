@@ -11,13 +11,19 @@ DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql+psycopg://hookhub:hookhub@localhost:5432/hookhub",
 )
+IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
 
 class Base(DeclarativeBase):
     """Base SQLAlchemy model."""
 
 
-engine = create_engine(DATABASE_URL, future=True, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    future=True,
+    pool_pre_ping=not IS_SQLITE,
+    connect_args={"check_same_thread": False} if IS_SQLITE else {},
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
 
 
