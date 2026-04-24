@@ -3,14 +3,12 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi.testclient import TestClient
-
 from backend.app.models.delivery import Delivery
 from backend.app.models.delivery_attempt import DeliveryAttempt
 from backend.app.models.event import Event
 
 
-def test_system_stats_returns_aggregated_metrics(client: TestClient, db_session) -> None:
+def test_system_stats_returns_aggregated_metrics(client, db_session, fake_redis) -> None:
     endpoint_response = client.post(
         "/endpoints",
         json={
@@ -87,6 +85,10 @@ def test_system_stats_returns_aggregated_metrics(client: TestClient, db_session)
     db_session.add_all(attempts)
     db_session.commit()
 
+    fake_redis.set("metrics:rate_limited_count", 2)
+    fake_redis.set("metrics:delayed_due_to_backpressure_count", 3)
+    fake_redis.items.extend(["queued-a", "queued-b"])
+
     response = client.get("/system/stats")
 
     assert response.status_code == 200
@@ -97,3 +99,6 @@ def test_system_stats_returns_aggregated_metrics(client: TestClient, db_session)
     assert body["success_rate"] == 50.0
     assert body["avg_latency_ms"] == 200.0
     assert body["p95_latency_ms"] == 300.0
+    assert body["rate_limited_count"] == 2
+    assert body["delayed_due_to_backpressure_count"] == 3
+    assert body["current_queue_depth"] == 2

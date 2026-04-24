@@ -80,6 +80,122 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+.chart-header {
+  margin-bottom: 12px;
+}
+
+.chart-shell {
+  width: 100%;
+  min-height: 220px;
+}
+
+.simple-chart {
+  width: 100%;
+}
+
+.split-chart {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr;
+  align-items: center;
+  gap: 20px;
+}
+
+.donut-wrap {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: 0 auto;
+}
+
+.donut-chart {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-center strong {
+  font-size: 1.8rem;
+}
+
+.donut-center span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+}
+
+.metric-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metric-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.metric-bar-track {
+  width: 100%;
+  height: 14px;
+  background: #efe8dc;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.metric-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 6px;
+}
+
+.line-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-axis {
+  stroke: var(--line);
+  stroke-width: 2;
+}
+
+.chart-label-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -92,6 +208,14 @@ a {
   font-size: 2rem;
   font-weight: 700;
   margin-top: 8px;
+}
+
+.metric.compact {
+  font-size: 1.5rem;
+}
+
+.compact-stats {
+  margin-bottom: 12px;
 }
 
 .muted {
@@ -228,5 +352,9 @@ pre {
     flex-direction: column;
     align-items: flex-start;
     border-radius: 18px;
+  }
+
+  .split-chart {
+    grid-template-columns: 1fr;
   }
 }

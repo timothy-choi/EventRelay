@@ -12,6 +12,7 @@ def test_create_endpoint(client: TestClient) -> None:
             "simulation_latency_ms": 100,
             "simulation_failure_rate": 50,
             "simulation_timeout_rate": 0,
+            "max_requests_per_second": 10,
         },
     )
 
@@ -24,6 +25,7 @@ def test_create_endpoint(client: TestClient) -> None:
     assert body["simulation_latency_ms"] == 100
     assert body["simulation_failure_rate"] == 50
     assert body["simulation_timeout_rate"] == 0
+    assert body["max_requests_per_second"] == 10
 
     list_response = client.get("/endpoints")
 
@@ -34,6 +36,7 @@ def test_create_endpoint(client: TestClient) -> None:
     assert endpoints[0]["simulation_latency_ms"] == 100
     assert endpoints[0]["simulation_failure_rate"] == 50
     assert endpoints[0]["simulation_timeout_rate"] == 0
+    assert endpoints[0]["max_requests_per_second"] == 10
 
 
 def test_patch_endpoint_updates_status_and_simulation_config(client: TestClient) -> None:
@@ -54,6 +57,7 @@ def test_patch_endpoint_updates_status_and_simulation_config(client: TestClient)
             "simulation_latency_ms": 250,
             "simulation_failure_rate": 25,
             "simulation_timeout_rate": 10,
+            "max_requests_per_second": 5,
         },
     )
 
@@ -63,6 +67,7 @@ def test_patch_endpoint_updates_status_and_simulation_config(client: TestClient)
     assert patched_endpoint["simulation_latency_ms"] == 250
     assert patched_endpoint["simulation_failure_rate"] == 25
     assert patched_endpoint["simulation_timeout_rate"] == 10
+    assert patched_endpoint["max_requests_per_second"] == 5
 
     list_response = client.get("/endpoints")
 
@@ -74,6 +79,7 @@ def test_patch_endpoint_updates_status_and_simulation_config(client: TestClient)
     assert endpoints[0]["simulation_latency_ms"] == 250
     assert endpoints[0]["simulation_failure_rate"] == 25
     assert endpoints[0]["simulation_timeout_rate"] == 10
+    assert endpoints[0]["max_requests_per_second"] == 5
 
 
 def test_create_endpoint_rejects_invalid_simulation_values(client: TestClient) -> None:
@@ -103,6 +109,11 @@ def test_create_endpoint_rejects_invalid_simulation_values(client: TestClient) -
             "target_url": "https://example.com/webhook",
             "simulation_timeout_rate": -1,
         },
+        {
+            "name": "Bad rate limit",
+            "target_url": "https://example.com/webhook",
+            "max_requests_per_second": -1,
+        },
     ]
 
     for payload in invalid_payloads:
@@ -127,6 +138,7 @@ def test_patch_endpoint_rejects_invalid_simulation_values(client: TestClient) ->
         {"simulation_failure_rate": 101},
         {"simulation_timeout_rate": -1},
         {"simulation_timeout_rate": 101},
+        {"max_requests_per_second": -1},
     ]
 
     for payload in invalid_payloads:

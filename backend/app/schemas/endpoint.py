@@ -13,6 +13,7 @@ class EndpointCreate(BaseModel):
     simulation_latency_ms: int = Field(default=0, ge=0)
     simulation_failure_rate: int = Field(default=0, ge=0, le=100)
     simulation_timeout_rate: int = Field(default=0, ge=0, le=100)
+    max_requests_per_second: int = Field(default=0, ge=0)
 
 
 class EndpointRead(BaseModel):
@@ -25,6 +26,7 @@ class EndpointRead(BaseModel):
     simulation_latency_ms: int
     simulation_failure_rate: int
     simulation_timeout_rate: int
+    max_requests_per_second: int
     created_at: datetime
 
 
@@ -33,6 +35,7 @@ class EndpointUpdate(BaseModel):
     simulation_latency_ms: Optional[int] = Field(default=None, ge=0)
     simulation_failure_rate: Optional[int] = Field(default=None, ge=0, le=100)
     simulation_timeout_rate: Optional[int] = Field(default=None, ge=0, le=100)
+    max_requests_per_second: Optional[int] = Field(default=None, ge=0)
 
 
 class EndpointStatsRead(BaseModel):

@@ -35,6 +35,12 @@ class Endpoint(Base):
         default=0,
         server_default=text("0"),
     )
+    max_requests_per_second: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

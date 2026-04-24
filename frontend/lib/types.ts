@@ -3,6 +3,7 @@ export type Endpoint = {
   name: string;
   target_url: string;
   is_active: boolean;
+  max_requests_per_second: number;
   simulation_latency_ms: number;
   simulation_failure_rate: number;
   simulation_timeout_rate: number;
@@ -70,6 +71,18 @@ export type DeliveryDetail = {
   event_payload: Record<string, unknown>;
   event_created_at: string;
   attempts: DeliveryAttempt[];
+};
+
+export type SystemStats = {
+  total_events_processed: number;
+  total_deliveries: number;
+  total_attempts: number;
+  success_rate: number;
+  avg_latency_ms: number | null;
+  p95_latency_ms: number | null;
+  rate_limited_count: number;
+  delayed_due_to_backpressure_count: number;
+  current_queue_depth: number;
 };
 
 export type TestWebhookReceiver = {
