@@ -1,7 +1,7 @@
 """add endpoint simulation fields
 
-Revision ID: 0002_add_endpoint_simulation_fields
-Revises: 0001_create_core_tables
+Revision ID: 0002_endpoint_sim
+Revises: 0001_core
 Create Date: 2026-04-23 00:10:00
 """
 from __future__ import annotations
@@ -10,8 +10,8 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0002_add_endpoint_simulation_fields"
-down_revision = "0001_create_core_tables"
+revision = "0002_endpoint_sim"
+down_revision = "0001_core"
 branch_labels = None
 depends_on = None
 

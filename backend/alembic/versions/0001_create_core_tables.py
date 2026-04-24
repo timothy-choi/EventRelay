@@ -1,6 +1,6 @@
 """create core tables
 
-Revision ID: 0001_create_core_tables
+Revision ID: 0001_core
 Revises: 
 Create Date: 2026-04-23 00:00:00
 """
@@ -10,7 +10,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = "0001_create_core_tables"
+revision = "0001_core"
 down_revision = None
 branch_labels = None
 depends_on = None

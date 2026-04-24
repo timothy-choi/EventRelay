@@ -38,4 +38,5 @@ def get_db_session() -> Generator[Session, None, None]:
 def init_db() -> None:
     from backend.app import models  # noqa: F401
 
-    Base.metadata.create_all(bind=engine)
+    if IS_SQLITE:
+        Base.metadata.create_all(bind=engine)
