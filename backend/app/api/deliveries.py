@@ -78,7 +78,7 @@ def get_delivery(delivery_id: UUID, session: Session = Depends(get_db_session)) 
     return serialize_delivery_detail(delivery)
 
 
-@router.post("/{delivery_id}/replay", response_model=DeliveryDetail, status_code=status.HTTP_201_CREATED)
+@router.post("/{delivery_id}/replay", response_model=DeliveryDetail, status_code=status.HTTP_200_OK)
 def replay_delivery(delivery_id: UUID, session: Session = Depends(get_db_session)) -> DeliveryDetail:
     original_delivery = get_delivery_by_id(session, delivery_id)
     if original_delivery is None:
