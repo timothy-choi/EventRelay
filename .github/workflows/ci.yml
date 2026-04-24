@@ -33,7 +33,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: sqlite:////tmp/eventrelay_ci.db
+      DATABASE_URL: postgresql+psycopg://hookhub:hookhub@localhost:5432/hookhub_test
       REDIS_URL: redis://localhost:6379/0
 
     steps:
@@ -49,5 +49,5 @@ jobs:
           pip install -r backend/requirements.txt
           pip install -r backend/requirements-dev.txt
 
-      - name: Run tests
-        run: pytest backend/tests
+      - name: Run tests against fresh Postgres
+        run: pytest -q backend/tests
