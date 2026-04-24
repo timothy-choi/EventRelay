@@ -100,6 +100,7 @@ export default function DeliveriesPage() {
                   <th>Status</th>
                   <th>Event</th>
                   <th>Endpoint</th>
+                  <th>Created</th>
                   <th>Attempts</th>
                   <th>Last error</th>
                 </tr>
@@ -114,6 +115,7 @@ export default function DeliveriesPage() {
                       <Link href={`/deliveries/${delivery.id}`}>{delivery.event_type}</Link>
                     </td>
                     <td>{delivery.endpoint_name}</td>
+                    <td>{delivery.created_at}</td>
                     <td>{delivery.total_attempts}</td>
                     <td>{delivery.last_error ?? "n/a"}</td>
                   </tr>

@@ -20,7 +20,9 @@ export function ReplayButton({ deliveryId }: { deliveryId: string }) {
       if (!response.ok) {
         throw new Error(await response.text());
       }
+      const replayedDelivery = (await response.json()) as { id: string };
       notifyDataChanged();
+      router.push(`/deliveries/${replayedDelivery.id}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to replay delivery");

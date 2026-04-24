@@ -117,6 +117,7 @@ export default function DashboardHome() {
                 <th>Status</th>
                 <th>Event</th>
                 <th>Endpoint</th>
+                <th>Created</th>
                 <th>Attempts</th>
               </tr>
             </thead>
@@ -130,6 +131,7 @@ export default function DashboardHome() {
                     <Link href={`/deliveries/${delivery.id}`}>{delivery.event_type}</Link>
                   </td>
                   <td>{delivery.endpoint_name}</td>
+                  <td>{delivery.created_at}</td>
                   <td>{delivery.total_attempts}</td>
                 </tr>
               ))}

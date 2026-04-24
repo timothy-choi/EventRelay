@@ -17,6 +17,9 @@ export default async function DeliveryDetailPage({
         <div className="page-header">
           <h1>Delivery detail</h1>
           <p>{delivery.event_type} for {delivery.endpoint_name}</p>
+          <p className="muted">
+            Delivery created at {delivery.created_at}. Replay creates a new delivery record with its own attempts.
+          </p>
         </div>
 
         <AutoRefresh label="Auto-refreshing delivery detail every 5s" />
@@ -41,6 +44,14 @@ export default async function DeliveryDetailPage({
               <div className="muted">Next retry</div>
               <div>{delivery.next_retry_at ?? "n/a"}</div>
             </div>
+            <div>
+              <div className="muted">Created at</div>
+              <div>{delivery.created_at}</div>
+            </div>
+            <div>
+              <div className="muted">Updated at</div>
+              <div>{delivery.updated_at}</div>
+            </div>
           </div>
         </div>
 
@@ -60,6 +71,8 @@ export default async function DeliveryDetailPage({
                 <tr>
                   <th>#</th>
                   <th>Status</th>
+                  <th>Started</th>
+                  <th>Completed</th>
                   <th>Response</th>
                   <th>Latency</th>
                   <th>Failure type</th>
@@ -71,6 +84,8 @@ export default async function DeliveryDetailPage({
                   <tr key={attempt.id}>
                     <td>{attempt.attempt_number}</td>
                     <td>{attempt.status}</td>
+                    <td>{attempt.started_at}</td>
+                    <td>{attempt.completed_at ?? "n/a"}</td>
                     <td>{attempt.response_code ?? "n/a"}</td>
                     <td>{attempt.latency_ms === null ? "n/a" : `${attempt.latency_ms} ms`}</td>
                     <td>{attempt.failure_type ?? "n/a"}</td>
