@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { notifyDataChanged } from "../lib/refresh";
 
 export function ReplayButton({ deliveryId }: { deliveryId: string }) {
   const router = useRouter();
@@ -19,6 +20,7 @@ export function ReplayButton({ deliveryId }: { deliveryId: string }) {
       if (!response.ok) {
         throw new Error(await response.text());
       }
+      notifyDataChanged();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to replay delivery");

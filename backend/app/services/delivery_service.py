@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -22,6 +23,7 @@ RETRY_DELAYS_SECONDS = {
     2: 120,
 }
 MAX_ATTEMPTS = 3
+logger = logging.getLogger(__name__)
 
 
 def list_delivery_rows() -> Select[tuple[Delivery]]:
@@ -115,6 +117,15 @@ async def process_delivery(session: Session, redis_client, delivery_id: UUID) ->
         delivery.next_retry_at = None
         delivery.updated_at = datetime.now(timezone.utc)
         session.commit()
+        logger.info(
+            "delivery_id=%s endpoint_name=%s attempt_number=%s latency_ms=%s failure_type=%s status=%s",
+            delivery.id,
+            delivery.endpoint.name,
+            0,
+            None,
+            "endpoint_inactive",
+            delivery.status,
+        )
         return
 
     attempt_number = delivery.total_attempts + 1
@@ -136,6 +147,16 @@ async def process_delivery(session: Session, redis_client, delivery_id: UUID) ->
     delivery.total_attempts = attempt_number
     delivery.last_error = result.error_message
     delivery.updated_at = datetime.now(timezone.utc)
+
+    logger.info(
+        "delivery_id=%s endpoint_name=%s attempt_number=%s latency_ms=%s failure_type=%s status=%s",
+        delivery.id,
+        delivery.endpoint.name,
+        attempt_number,
+        result.latency_ms,
+        result.failure_type,
+        result.status,
+    )
 
     if result.status == DeliveryStatus.succeeded.value:
         delivery.status = DeliveryStatus.succeeded.value

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { notifyDataChanged } from "../lib/refresh";
 
 export function CreateTestWebhookForm() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export function CreateTestWebhookForm() {
         throw new Error(await response.text());
       }
       setName("");
+      notifyDataChanged();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create test webhook receiver");

@@ -1,6 +1,34 @@
-# EventRelay
+# EventRelay – Network-Aware Webhook Delivery Platform
 
-EventRelay is the initial MVP backend for a developer-facing webhook delivery platform. The first milestone covers the full async delivery path: register endpoint -> create event -> enqueue delivery -> worker sends webhook -> store delivery results.
+EventRelay is a distributed event delivery system that simulates real-world network conditions to test webhook reliability.
+
+It is designed to showcase asynchronous fan-out, queue-backed workers, retry behavior, failure classification, proxy-aware networking, and delivery observability in a developer-friendly local stack.
+
+## Key Features
+
+- Async event fan-out from one event to many webhook endpoints
+- Retry with exponential backoff for retryable delivery failures
+- Delivery failure classification for timeouts, connection errors, DNS errors, and HTTP failures
+- Network simulation proxy for latency, injected failures, and timeouts
+- Per-endpoint simulation configuration
+- Built-in webhook receiver for testing without running an external server
+- Delivery observability through attempts, endpoint stats, and system metrics
+- Minimal dashboard for endpoints, deliveries, test receivers, and delivery inspection
+
+## Architecture
+
+```text
+Client -> API -> DB/Queue -> Worker -> Proxy -> Endpoint
+```
+
+Component roles:
+
+- `Client`: creates endpoints, emits events, inspects deliveries, and views metrics
+- `API`: accepts events/endpoints and writes durable state to Postgres
+- `DB/Queue`: PostgreSQL stores delivery state while Redis holds pending delivery IDs
+- `Worker`: consumes queued deliveries asynchronously and manages retries
+- `Proxy`: injects latency, timeouts, and failures to simulate unreliable networks
+- `Endpoint`: either a real webhook target or EventRelay's built-in test receiver
 
 ## Stack
 
@@ -10,266 +38,259 @@ EventRelay is the initial MVP backend for a developer-facing webhook delivery pl
 - PostgreSQL
 - Redis
 - httpx
-- Docker Compose
 - Go network simulation proxy
-
-## Project Structure
-
-```text
-backend/
-  app/
-    main.py
-    api/
-    models/
-    schemas/
-    services/
-    db/
-    worker/
-proxy/
-  main.go
-  Dockerfile
-  README.md
-frontend/
-  app/
-  components/
-  lib/
-  Dockerfile
-```
+- Next.js dashboard
+- Docker Compose
 
 ## Local Setup
 
-1. Start the full stack:
-
-```bash
-docker-compose up --build
-```
-
-2. API will be available at:
-
-```text
-http://localhost:8000
-```
-
-3. Dashboard will be available at:
-
-```text
-http://localhost:3000
-```
-
-4. Health check:
-
-```bash
-curl http://localhost:8000/health
-```
-
-## Example Usage
-
-Create an endpoint:
-
-```bash
-curl -X POST http://localhost:8000/endpoints \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Local test endpoint",
-    "target_url": "https://example.com/webhook"
-  }'
-```
-
-Create an endpoint with simulation settings:
-
-```bash
-curl -X POST http://localhost:8000/endpoints \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "failure-test",
-    "target_url": "http://host.docker.internal:9000/webhook",
-    "simulation_latency_ms": 100,
-    "simulation_failure_rate": 50,
-    "simulation_timeout_rate": 0
-  }'
-```
-
-List endpoints:
-
-```bash
-curl http://localhost:8000/endpoints
-```
-
-Create an event:
-
-```bash
-curl -X POST http://localhost:8000/events \
-  -H "Content-Type: application/json" \
-  -d '{
-    "event_type": "test.event",
-    "payload": {
-      "message": "hello"
-    }
-  }'
-```
-
-List deliveries:
-
-```bash
-curl http://localhost:8000/deliveries
-```
-
-Get one delivery with attempts:
-
-```bash
-curl http://localhost:8000/deliveries/<delivery_id>
-```
-
-## Architecture
-
-- FastAPI exposes endpoint, event, delivery, and health APIs.
-- PostgreSQL stores endpoints, events, deliveries, and delivery attempts.
-- Redis stores pending delivery IDs in a simple queue.
-- A worker process consumes delivery IDs from Redis, sends webhooks with signed headers, and records attempt metadata.
-- A Go proxy can sit between the worker and the final webhook target to inject latency, timeouts, and synthetic failures for reliability testing.
-- Retry behavior is intentionally simple for the MVP: retries are handled by the worker with in-process sleep and requeue logic.
-
-## Environment Variables
-
-- `DATABASE_URL`
-- `REDIS_URL`
-- `USE_NETWORK_PROXY`
-- `NETWORK_PROXY_URL`
-
-These are configured automatically in `docker-compose.yml` for local development.
-
-## Network Simulation Proxy
-
-The worker can optionally deliver through a dedicated proxy instead of posting directly to the endpoint:
-
-```text
-worker -> proxy -> target webhook endpoint
-```
-
-When proxy mode is enabled, the worker sends the original webhook payload and signature headers to `NETWORK_PROXY_URL` and includes:
-
-- `X-EventRelay-Target-Url`
-- `X-EventRelay-Latency-Ms`
-- `X-EventRelay-Timeout-Rate`
-- `X-EventRelay-Failure-Rate`
-
-This helps test how delivery retries, failure handling, and observability behave under slower or less reliable network conditions.
-
-Example latency simulation:
-
-```bash
-docker-compose up --build
-```
-
-With the default compose config, the worker uses the proxy and applies a `300ms` delay before forwarding each webhook. You can adjust the worker environment variables in `docker-compose.yml` to simulate different conditions.
-
-Proxy logs include:
-
-- target URL
-- latency applied
-- whether a failure was injected
-- forwarded response status
-
-## Network Simulation Per Endpoint
-
-Each endpoint can define its own network simulation settings, which the worker forwards to the proxy when `USE_NETWORK_PROXY=true`.
-
-Example:
-
-```bash
-curl -X POST http://localhost:8000/endpoints \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "failure-test",
-    "target_url": "http://host.docker.internal:9000/webhook",
-    "simulation_latency_ms": 100,
-    "simulation_failure_rate": 50,
-    "simulation_timeout_rate": 0
-  }'
-```
-
-- `simulation_latency_ms` adds delay before forwarding the webhook.
-- `simulation_failure_rate` injects synthetic `503` responses without forwarding.
-- `simulation_timeout_rate` simulates delivery timeouts by delaying long enough for the worker request to time out.
-
-Endpoints without simulation values continue to behave the same way, using `0` for all simulation settings.
-
-## Endpoint Reliability Stats
-
-You can inspect per-endpoint delivery health with:
-
-```bash
-curl http://localhost:8000/endpoints/<endpoint_id>/stats
-```
-
-The stats response includes:
-
-- delivery status counts
-- success rate
-- average latency
-- p95 latency
-- total attempts
-- failure type counts for timeouts, connection errors, HTTP 4xx, and HTTP 5xx
-
-## Built-in Test Webhook Receiver
-
-EventRelay includes a built-in test receiver so you can validate delivery without running your own webhook server.
-
-Flow:
-
-1. Create a test webhook receiver
-2. Copy the generated URL
-3. Create an EventRelay endpoint using that URL
-4. Send an event
-5. View the received request in the dashboard
-
-Create a receiver:
-
-```bash
-curl -X POST http://localhost:8000/test-webhooks \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "My test receiver"
-  }'
-```
-
-List received requests:
-
-```bash
-curl http://localhost:8000/test-webhooks/<receiver_id>/requests
-```
-
-## Frontend Dashboard
-
-A minimal Next.js dashboard is included for browsing endpoints, deliveries, attempts, and endpoint reliability stats.
-
-Run the full stack:
+Start the full stack:
 
 ```bash
 docker compose up --build
 ```
 
-The backend and worker containers automatically run `alembic upgrade head` on startup, so local Docker environments stay aligned with the current Postgres schema before serving requests.
-If a local Docker Postgres volume already contains pre-Alembic tables, the startup bootstrap stamps the existing schema to the matching migration revision before upgrading.
+Services:
 
-Frontend environment:
+- API: `http://localhost:8000`
+- Dashboard: `http://localhost:3000`
+- Proxy: `http://localhost:8080`
 
-```text
-NEXT_PUBLIC_API_URL=http://localhost:8000
-INTERNAL_API_URL=http://backend:8000
+Health check:
+
+```bash
+curl http://localhost:8000/health
 ```
 
-Available pages:
+## Demo
 
-- `/` dashboard home with total endpoints, recent deliveries, and success/failure counts
-- `/endpoints` endpoint list with simulation config and deactivate action
-- `/endpoints/<endpoint_id>` endpoint detail with reliability stats
-- `/deliveries` delivery list
-- `/deliveries/<delivery_id>` delivery detail with attempts and replay action
+### 1. Create a built-in test receiver
 
-## Database Migrations
+```bash
+curl -X POST http://localhost:8000/test-webhooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "stable-receiver"
+  }'
+```
 
-This project uses Alembic for PostgreSQL schema migrations.
+This returns a receiver URL like:
+
+```text
+http://backend:8000/test-webhooks/<receiver_id>
+```
+
+Use that URL as an endpoint target inside Docker.
+
+### 2. Create a stable endpoint
+
+```bash
+curl -X POST http://localhost:8000/endpoints \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "stable-endpoint",
+    "target_url": "http://backend:8000/test-webhooks/<receiver_id>"
+  }'
+```
+
+### 3. Create an unstable endpoint
+
+```bash
+curl -X POST http://localhost:8000/endpoints \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "unstable-endpoint",
+    "target_url": "http://host.docker.internal:9000/webhook",
+    "simulation_latency_ms": 300,
+    "simulation_failure_rate": 50,
+    "simulation_timeout_rate": 0
+  }'
+```
+
+### 4. Send an event
+
+```bash
+curl -X POST http://localhost:8000/events \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_type": "demo.network.test",
+    "payload": {
+      "message": "hello from EventRelay"
+    }
+  }'
+```
+
+### 5. Inspect deliveries
+
+```bash
+curl http://localhost:8000/deliveries
+```
+
+### 6. Inspect system-wide metrics
+
+```bash
+curl http://localhost:8000/system/stats
+```
+
+### 7. Inspect built-in receiver traffic
+
+```bash
+curl http://localhost:8000/test-webhooks/<receiver_id>/requests
+```
+
+## API Highlights
+
+Core workflow:
+
+- `POST /endpoints`
+- `GET /endpoints`
+- `PATCH /endpoints/{endpoint_id}`
+- `POST /events`
+- `GET /events`
+- `GET /deliveries`
+- `GET /deliveries/{delivery_id}`
+- `POST /deliveries/{delivery_id}/replay`
+- `GET /endpoints/{endpoint_id}/stats`
+- `GET /system/stats`
+
+Built-in receiver workflow:
+
+- `POST /test-webhooks`
+- `GET /test-webhooks`
+- `GET /test-webhooks/{receiver_id}/requests`
+- `POST /test-webhooks/{receiver_id}`
+
+## Network Simulation
+
+When proxy mode is enabled, the delivery path becomes:
+
+```text
+worker -> proxy -> target webhook endpoint
+```
+
+The proxy can inject:
+
+- latency
+- synthetic `503` failures
+- synthetic timeouts
+
+Per-endpoint simulation fields:
+
+- `simulation_latency_ms`
+- `simulation_failure_rate`
+- `simulation_timeout_rate`
+
+Example:
+
+```bash
+curl -X PATCH http://localhost:8000/endpoints/<endpoint_id> \
+  -H "Content-Type: application/json" \
+  -d '{
+    "simulation_latency_ms": 300,
+    "simulation_failure_rate": 50,
+    "simulation_timeout_rate": 0
+  }'
+```
+
+This helps surface how the queue, worker, retries, and observability behave under degraded network conditions.
+
+## Load Testing
+
+Run the load script:
+
+```bash
+EVENT_COUNT=100 CONCURRENCY=10 ./scripts/load_test.sh
+```
+
+Environment variables:
+
+- `EVENT_COUNT` default: `100`
+- `CONCURRENCY` default: `5`
+- `API_URL` default: `http://localhost:8000`
+
+The script reports:
+
+- total time taken
+- requests per second
+- failed request count
+
+What to watch under load:
+
+- event insert throughput at the API
+- number of queued deliveries created
+- worker retry activity
+- delivery status distribution
+- latency increase when proxy simulation is enabled
+
+## Observability
+
+### Endpoint stats
+
+```bash
+curl http://localhost:8000/endpoints/<endpoint_id>/stats
+```
+
+Returns delivery totals, success rate, latency summaries, and failure counts per endpoint.
+
+### System stats
+
+```bash
+curl http://localhost:8000/system/stats
+```
+
+Returns:
+
+- `total_events_processed`
+- `total_deliveries`
+- `total_attempts`
+- `success_rate`
+- `avg_latency_ms`
+- `p95_latency_ms`
+
+### Worker logs
+
+Worker logs now include:
+
+- `delivery_id`
+- `endpoint_name`
+- `attempt_number`
+- `latency_ms`
+- `failure_type`
+
+This makes it easier to trace delivery outcomes under network stress.
+
+## Built-in Test Webhook Receiver
+
+EventRelay includes an internal receiver for fast local debugging.
+
+Flow:
+
+1. Create a test receiver
+2. Copy the generated internal URL
+3. Create an EventRelay endpoint using that URL
+4. Send events
+5. View the captured request headers and body in the dashboard
+
+This is useful for validating:
+
+- signature headers
+- payload shape
+- event fan-out behavior
+- retry + replay behavior
+
+## Results Template
+
+Use this as a demo/runbook template after load or resilience tests:
+
+- Total events: `<count>`
+- Total deliveries: `<count>`
+- Success rate: `<percent>`
+- Average latency: `<ms>`
+- P95 latency: `<ms>`
+- Retryable failures observed: `<count>`
+- Final failed deliveries: `<count>`
+
+## Migrations
 
 Run migrations locally:
 
@@ -281,19 +302,20 @@ alembic upgrade head
 Create a new migration:
 
 ```bash
-export DATABASE_URL=postgresql+psycopg://hookhub:hookhub@localhost:5432/hookhub
-alembic revision -m "describe the change"
-```
-
-If you want Alembic to compare the current models against the database automatically, use:
-
-```bash
 alembic revision --autogenerate -m "describe the change"
 ```
 
-## Next Planned Features
+## Testing
 
-- Replay failed deliveries
-- Latency, jitter, and timeout testing
-- Dashboard
-- AWS deployment
+Run tests:
+
+```bash
+pytest -q
+```
+
+CI runs:
+
+- Alembic migrations
+- backend pytest suite
+
+The load test script is intentionally not run in CI.

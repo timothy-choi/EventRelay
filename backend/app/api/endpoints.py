@@ -12,6 +12,7 @@ from backend.app.models.delivery import Delivery
 from backend.app.models.delivery_attempt import DeliveryAttempt
 from backend.app.models.endpoint import Endpoint
 from backend.app.schemas.endpoint import EndpointCreate, EndpointRead, EndpointStatsRead, EndpointUpdate
+from backend.app.services.stats_service import calculate_latency_metrics
 
 
 router = APIRouter(prefix="/endpoints", tags=["endpoints"])
@@ -95,19 +96,8 @@ def get_endpoint_stats(
         if delivery.status in status_counts:
             status_counts[delivery.status] += 1
 
-    latencies = sorted(
-        attempt.latency_ms for attempt in attempts if attempt.latency_ms is not None
-    )
-    avg_latency_ms = (
-        sum(latencies) / len(latencies)
-        if latencies
-        else None
-    )
-    if latencies:
-        p95_index = max(0, -(-95 * len(latencies) // 100) - 1)
-        p95_latency_ms = latencies[p95_index]
-    else:
-        p95_latency_ms = None
+    latencies = [attempt.latency_ms for attempt in attempts if attempt.latency_ms is not None]
+    avg_latency_ms, p95_latency_ms = calculate_latency_metrics(latencies)
 
     failure_counts = {
         "timeout": 0,

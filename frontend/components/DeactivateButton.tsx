@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { notifyDataChanged } from "../lib/refresh";
 
 export function DeactivateButton({
   endpointId,
@@ -28,6 +29,7 @@ export function DeactivateButton({
       if (!response.ok) {
         throw new Error(await response.text());
       }
+      notifyDataChanged();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to deactivate endpoint");

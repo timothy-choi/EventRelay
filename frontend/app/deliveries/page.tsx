@@ -1,20 +1,97 @@
+"use client";
+
 import Link from "next/link";
-import { AutoRefresh } from "../../components/AutoRefresh";
-import { getDeliveries } from "../../lib/api";
+import { useEffect, useState } from "react";
 
-export default async function DeliveriesPage() {
-  try {
-    const deliveries = await getDeliveries();
+import { DeliveryListItem } from "../../lib/types";
+import { DATA_CHANGED_EVENT } from "../../lib/refresh";
 
-    return (
-      <div className="stack">
-        <div className="page-header">
-          <h1>Deliveries</h1>
-          <p>Track delivery state, retries, and the most recent error for each event.</p>
-        </div>
+async function fetchDeliveries(): Promise<DeliveryListItem[]> {
+  const response = await fetch("/api/deliveries", {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  const deliveries = (await response.json()) as DeliveryListItem[];
+  return deliveries.sort(
+    (left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime(),
+  );
+}
 
-        <AutoRefresh label="Auto-refreshing deliveries every 5s" />
+export default function DeliveriesPage() {
+  const [deliveries, setDeliveries] = useState<DeliveryListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    let active = true;
+
+    async function load() {
+      try {
+        setError(null);
+        const data = await fetchDeliveries();
+        if (active) {
+          setDeliveries(data);
+        }
+      } catch (err) {
+        if (active) {
+          setError(err instanceof Error ? err.message : "Failed to load deliveries.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    const timer = window.setInterval(() => {
+      void load();
+    }, 3000);
+
+    function handleDataChanged() {
+      void load();
+    }
+
+    window.addEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener(DATA_CHANGED_EVENT, handleDataChanged);
+    };
+  }, []);
+
+  async function handleRefresh() {
+    setLoading(true);
+    try {
+      setDeliveries(await fetchDeliveries());
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load deliveries.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="stack">
+      <div className="page-header">
+        <h1>Deliveries</h1>
+        <p>Track delivery state, retries, and the most recent error for each event.</p>
+      </div>
+
+      <div className="refresh-bar">
+        <span className="muted">{loading ? "Refreshing deliveries..." : "Polling every 3s"}</span>
+        <button className="button" onClick={handleRefresh}>
+          Refresh
+        </button>
+      </div>
+
+      {error ? (
+        <div className="error-box">{error}</div>
+      ) : (
         <div className="card">
           <div className="table-wrap">
             <table>
@@ -45,18 +122,7 @@ export default async function DeliveriesPage() {
             </table>
           </div>
         </div>
-      </div>
-    );
-  } catch (error) {
-    return (
-      <div className="stack">
-        <div className="page-header">
-          <h1>Deliveries</h1>
-        </div>
-        <div className="error-box">
-          {error instanceof Error ? error.message : "Failed to load deliveries."}
-        </div>
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 }
