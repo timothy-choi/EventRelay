@@ -15,8 +15,30 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { TooltipProps } from "recharts";
 
 import { EndpointStats, SystemStats } from "../lib/types";
+
+type StatusDatum = {
+  name: string;
+  value: number;
+  fill: string;
+};
+
+type LatencyDatum = {
+  name: string;
+  latency_ms: number;
+};
+
+type DeliveryTrendDatum = {
+  minute: string;
+  count: number;
+};
+
+type EndpointReliabilityDatum = {
+  name: string;
+  success_rate: number;
+};
 
 type DashboardChartsProps = {
   endpointStats: EndpointStats[];
@@ -26,10 +48,7 @@ type DashboardChartsProps = {
     retrying: number;
   };
   systemStats: SystemStats | null;
-  deliveriesOverTime: Array<{
-    minute: string;
-    count: number;
-  }>;
+  deliveriesOverTime: DeliveryTrendDatum[];
 };
 
 const statusColors = {
@@ -45,24 +64,32 @@ function formatMetric(value: number | null): string {
   return `${Math.round(value)} ms`;
 }
 
+function formatTooltipValue(value: string | number): string {
+  return `${Math.round(Number(value))} ms`;
+}
+
+function formatPercentValue(value: string | number): string {
+  return `${value}%`;
+}
+
 export default function DashboardCharts({
   endpointStats,
   statusCounts,
   systemStats,
   deliveriesOverTime,
 }: DashboardChartsProps) {
-  const statusData = [
+  const statusData: StatusDatum[] = [
     { name: "Succeeded", value: statusCounts.succeeded, fill: statusColors.succeeded },
     { name: "Failed", value: statusCounts.failed, fill: statusColors.failed },
     { name: "Retrying", value: statusCounts.retrying, fill: statusColors.retrying },
   ];
 
-  const latencyData = [
+  const latencyData: LatencyDatum[] = [
     { name: "Average", latency_ms: systemStats?.avg_latency_ms ?? 0 },
     { name: "P95", latency_ms: systemStats?.p95_latency_ms ?? 0 },
   ];
 
-  const endpointReliabilityData = endpointStats
+  const endpointReliabilityData: EndpointReliabilityDatum[] = endpointStats
     .filter((stats) => stats.total_deliveries > 0)
     .sort((left, right) => right.success_rate - left.success_rate)
     .slice(0, 6)
@@ -123,7 +150,7 @@ export default function DashboardCharts({
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip formatter={(value) => `${Math.round(Number(value))} ms`} />
+              <Tooltip formatter={formatTooltipValue as TooltipProps<string | number, string>["formatter"]} />
               <Bar dataKey="latency_ms" fill="#0e7c66" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -167,7 +194,7 @@ export default function DashboardCharts({
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" domain={[0, 100]} unit="%" />
                 <YAxis type="category" dataKey="name" width={110} />
-                <Tooltip formatter={(value) => `${value}%`} />
+                <Tooltip formatter={formatPercentValue as TooltipProps<string | number, string>["formatter"]} />
                 <Bar dataKey="success_rate" fill="#0e7c66" radius={[0, 8, 8, 0]} />
               </BarChart>
             </ResponsiveContainer>
