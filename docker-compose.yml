@@ -25,6 +25,13 @@ services:
       timeout: 3s
       retries: 5
 
+  proxy:
+    build:
+      context: .
+      dockerfile: proxy/Dockerfile
+    ports:
+      - "8080:8080"
+
   backend:
     build:
       context: .
@@ -32,6 +39,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://hookhub:hookhub@postgres:5432/hookhub
       REDIS_URL: redis://redis:6379/0
+      USE_NETWORK_PROXY: "false"
     ports:
       - "8000:8000"
     depends_on:
@@ -48,11 +56,18 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://hookhub:hookhub@postgres:5432/hookhub
       REDIS_URL: redis://redis:6379/0
+      USE_NETWORK_PROXY: "true"
+      NETWORK_PROXY_URL: http://proxy:8080/proxy
+      NETWORK_PROXY_LATENCY_MS: "300"
+      NETWORK_PROXY_TIMEOUT_RATE: "0"
+      NETWORK_PROXY_FAILURE_RATE: "0"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      proxy:
+        condition: service_started
 
 volumes:
   postgres_data:

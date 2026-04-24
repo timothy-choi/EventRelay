@@ -11,6 +11,7 @@ EventRelay is the initial MVP backend for a developer-facing webhook delivery pl
 - Redis
 - httpx
 - Docker Compose
+- Go network simulation proxy
 
 ## Project Structure
 
@@ -24,6 +25,10 @@ backend/
     services/
     db/
     worker/
+proxy/
+  main.go
+  Dockerfile
+  README.md
 ```
 
 ## Local Setup
@@ -96,20 +101,53 @@ curl http://localhost:8000/deliveries/<delivery_id>
 - PostgreSQL stores endpoints, events, deliveries, and delivery attempts.
 - Redis stores pending delivery IDs in a simple queue.
 - A worker process consumes delivery IDs from Redis, sends webhooks with signed headers, and records attempt metadata.
+- A Go proxy can sit between the worker and the final webhook target to inject latency, timeouts, and synthetic failures for reliability testing.
 - Retry behavior is intentionally simple for the MVP: retries are handled by the worker with in-process sleep and requeue logic.
 
 ## Environment Variables
 
 - `DATABASE_URL`
 - `REDIS_URL`
+- `USE_NETWORK_PROXY`
+- `NETWORK_PROXY_URL`
 
 These are configured automatically in `docker-compose.yml` for local development.
+
+## Network Simulation Proxy
+
+The worker can optionally deliver through a dedicated proxy instead of posting directly to the endpoint:
+
+```text
+worker -> proxy -> target webhook endpoint
+```
+
+When proxy mode is enabled, the worker sends the original webhook payload and signature headers to `NETWORK_PROXY_URL` and includes:
+
+- `X-EventRelay-Target-Url`
+- `X-EventRelay-Latency-Ms`
+- `X-EventRelay-Timeout-Rate`
+- `X-EventRelay-Failure-Rate`
+
+This helps test how delivery retries, failure handling, and observability behave under slower or less reliable network conditions.
+
+Example latency simulation:
+
+```bash
+docker-compose up --build
+```
+
+With the default compose config, the worker uses the proxy and applies a `300ms` delay before forwarding each webhook. You can adjust the worker environment variables in `docker-compose.yml` to simulate different conditions.
+
+Proxy logs include:
+
+- target URL
+- latency applied
+- whether a failure was injected
+- forwarded response status
 
 ## Next Planned Features
 
 - Replay failed deliveries
-- Network simulation proxy
 - Latency, jitter, and timeout testing
 - Dashboard
 - AWS deployment
-# EventRelay

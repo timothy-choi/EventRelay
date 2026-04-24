@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import socket
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,6 +13,12 @@ import httpx
 
 from backend.app.models.endpoint import Endpoint
 from backend.app.models.event import Event
+
+USE_NETWORK_PROXY = os.getenv("USE_NETWORK_PROXY", "false").lower() == "true"
+NETWORK_PROXY_URL = os.getenv("NETWORK_PROXY_URL", "http://proxy:8080/proxy")
+DEFAULT_PROXY_LATENCY_MS = os.getenv("NETWORK_PROXY_LATENCY_MS", "300")
+DEFAULT_PROXY_TIMEOUT_RATE = os.getenv("NETWORK_PROXY_TIMEOUT_RATE", "0")
+DEFAULT_PROXY_FAILURE_RATE = os.getenv("NETWORK_PROXY_FAILURE_RATE", "0")
 
 
 @dataclass
@@ -137,8 +144,13 @@ def resolve_delivery_status(failure_type: str | None) -> str:
     return "failed"
 
 
-async def send_webhook(endpoint: Endpoint, event: Event, timeout_seconds: float = 10.0) -> WebhookSendResult:
-    raw_body = build_webhook_payload(event)
+def get_delivery_target_url(endpoint: Endpoint) -> str:
+    if not USE_NETWORK_PROXY:
+        return endpoint.target_url
+    return NETWORK_PROXY_URL
+
+
+def build_delivery_headers(endpoint: Endpoint, event: Event, raw_body: bytes) -> dict[str, str]:
     timestamp = str(int(datetime.now(timezone.utc).timestamp()))
     signature = build_signature(endpoint.signing_secret, timestamp, raw_body)
     headers = {
@@ -147,11 +159,27 @@ async def send_webhook(endpoint: Endpoint, event: Event, timeout_seconds: float 
         "X-HookHub-Timestamp": timestamp,
         "X-HookHub-Signature": signature,
     }
+    if USE_NETWORK_PROXY:
+        headers.update(
+            {
+                "X-EventRelay-Target-Url": endpoint.target_url,
+                "X-EventRelay-Latency-Ms": DEFAULT_PROXY_LATENCY_MS,
+                "X-EventRelay-Timeout-Rate": DEFAULT_PROXY_TIMEOUT_RATE,
+                "X-EventRelay-Failure-Rate": DEFAULT_PROXY_FAILURE_RATE,
+            }
+        )
+    return headers
+
+
+async def send_webhook(endpoint: Endpoint, event: Event, timeout_seconds: float = 10.0) -> WebhookSendResult:
+    raw_body = build_webhook_payload(event)
+    headers = build_delivery_headers(endpoint, event, raw_body)
+    target_url = get_delivery_target_url(endpoint)
 
     start = perf_counter()
     try:
         async with httpx.AsyncClient(timeout=timeout_seconds) as client:
-            response = await client.post(endpoint.target_url, content=raw_body, headers=headers)
+            response = await client.post(target_url, content=raw_body, headers=headers)
         latency_ms = int((perf_counter() - start) * 1000)
         failure_type = classify_error(response=response)
         return WebhookSendResult(
