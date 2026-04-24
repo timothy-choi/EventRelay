@@ -183,6 +183,23 @@ curl -X POST http://localhost:8000/endpoints \
 
 Endpoints without simulation values continue to behave the same way, using `0` for all simulation settings.
 
+## Endpoint Reliability Stats
+
+You can inspect per-endpoint delivery health with:
+
+```bash
+curl http://localhost:8000/endpoints/<endpoint_id>/stats
+```
+
+The stats response includes:
+
+- delivery status counts
+- success rate
+- average latency
+- p95 latency
+- total attempts
+- failure type counts for timeouts, connection errors, HTTP 4xx, and HTTP 5xx
+
 ## Database Migrations
 
 This project uses Alembic for PostgreSQL schema migrations.

@@ -33,3 +33,21 @@ class EndpointUpdate(BaseModel):
     simulation_latency_ms: Optional[int] = Field(default=None, ge=0)
     simulation_failure_rate: Optional[int] = Field(default=None, ge=0, le=100)
     simulation_timeout_rate: Optional[int] = Field(default=None, ge=0, le=100)
+
+
+class EndpointStatsRead(BaseModel):
+    endpoint_id: uuid.UUID
+    endpoint_name: str
+    total_deliveries: int
+    succeeded: int
+    failed: int
+    retrying: int
+    pending: int
+    success_rate: float
+    avg_latency_ms: float | None
+    p95_latency_ms: int | None
+    total_attempts: int
+    timeout_count: int
+    connection_error_count: int
+    http_4xx_count: int
+    http_5xx_count: int

@@ -40,13 +40,21 @@ def reset_database() -> Generator[None, None, None]:
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]:
+def db_session() -> Generator:
     session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+@pytest.fixture
+def client(monkeypatch: pytest.MonkeyPatch, db_session) -> Generator[TestClient, None, None]:
     fake_redis = FakeRedis()
 
     def override_get_db() -> Generator:
         try:
-            yield session
+            yield db_session
         finally:
             pass
 
@@ -58,4 +66,3 @@ def client(monkeypatch: pytest.MonkeyPatch) -> Generator[TestClient, None, None]
         yield test_client
 
     app.dependency_overrides.clear()
-    session.close()

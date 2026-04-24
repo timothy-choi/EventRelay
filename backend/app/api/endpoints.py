@@ -8,8 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db_session
+from backend.app.models.delivery import Delivery
+from backend.app.models.delivery_attempt import DeliveryAttempt
 from backend.app.models.endpoint import Endpoint
-from backend.app.schemas.endpoint import EndpointCreate, EndpointRead, EndpointUpdate
+from backend.app.schemas.endpoint import EndpointCreate, EndpointRead, EndpointStatsRead, EndpointUpdate
 
 
 router = APIRouter(prefix="/endpoints", tags=["endpoints"])
@@ -57,3 +59,82 @@ def update_endpoint(
     session.commit()
     session.refresh(endpoint)
     return endpoint
+
+
+@router.get("/{endpoint_id}/stats", response_model=EndpointStatsRead)
+def get_endpoint_stats(
+    endpoint_id: UUID,
+    session: Session = Depends(get_db_session),
+) -> EndpointStatsRead:
+    endpoint = session.get(Endpoint, endpoint_id)
+    if endpoint is None:
+        raise HTTPException(status_code=404, detail="Endpoint not found")
+
+    deliveries = list(
+        session.execute(
+            select(Delivery).where(Delivery.endpoint_id == endpoint_id).order_by(Delivery.created_at.asc())
+        ).scalars()
+    )
+    attempts = list(
+        session.execute(
+            select(DeliveryAttempt)
+            .join(Delivery, DeliveryAttempt.delivery_id == Delivery.id)
+            .where(Delivery.endpoint_id == endpoint_id)
+            .order_by(DeliveryAttempt.started_at.asc())
+        ).scalars()
+    )
+
+    total_deliveries = len(deliveries)
+    status_counts = {
+        "succeeded": 0,
+        "failed": 0,
+        "retrying": 0,
+        "pending": 0,
+    }
+    for delivery in deliveries:
+        if delivery.status in status_counts:
+            status_counts[delivery.status] += 1
+
+    latencies = sorted(
+        attempt.latency_ms for attempt in attempts if attempt.latency_ms is not None
+    )
+    avg_latency_ms = (
+        sum(latencies) / len(latencies)
+        if latencies
+        else None
+    )
+    if latencies:
+        p95_index = max(0, -(-95 * len(latencies) // 100) - 1)
+        p95_latency_ms = latencies[p95_index]
+    else:
+        p95_latency_ms = None
+
+    failure_counts = {
+        "timeout": 0,
+        "connection_error": 0,
+        "http_4xx": 0,
+        "http_5xx": 0,
+    }
+    for attempt in attempts:
+        if attempt.failure_type in failure_counts:
+            failure_counts[attempt.failure_type] += 1
+
+    success_rate = (status_counts["succeeded"] / total_deliveries * 100) if total_deliveries else 0.0
+
+    return EndpointStatsRead(
+        endpoint_id=endpoint.id,
+        endpoint_name=endpoint.name,
+        total_deliveries=total_deliveries,
+        succeeded=status_counts["succeeded"],
+        failed=status_counts["failed"],
+        retrying=status_counts["retrying"],
+        pending=status_counts["pending"],
+        success_rate=success_rate,
+        avg_latency_ms=avg_latency_ms,
+        p95_latency_ms=p95_latency_ms,
+        total_attempts=len(attempts),
+        timeout_count=failure_counts["timeout"],
+        connection_error_count=failure_counts["connection_error"],
+        http_4xx_count=failure_counts["http_4xx"],
+        http_5xx_count=failure_counts["http_5xx"],
+    )
