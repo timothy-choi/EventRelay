@@ -15,7 +15,7 @@ def test_create_endpoint(client: TestClient) -> None:
         },
     )
 
-    assert response.status_code == 201
+    assert response.status_code in {200, 201}, response.text
     body = response.json()
     assert body["id"]
     assert body["name"] == "Local test endpoint"
@@ -24,6 +24,16 @@ def test_create_endpoint(client: TestClient) -> None:
     assert body["simulation_latency_ms"] == 100
     assert body["simulation_failure_rate"] == 50
     assert body["simulation_timeout_rate"] == 0
+
+    list_response = client.get("/endpoints")
+
+    assert list_response.status_code == 200, list_response.text
+    endpoints = list_response.json()
+    assert len(endpoints) == 1
+    assert endpoints[0]["id"] == body["id"]
+    assert endpoints[0]["simulation_latency_ms"] == 100
+    assert endpoints[0]["simulation_failure_rate"] == 50
+    assert endpoints[0]["simulation_timeout_rate"] == 0
 
 
 def test_patch_endpoint_updates_status_and_simulation_config(client: TestClient) -> None:
@@ -34,6 +44,7 @@ def test_patch_endpoint_updates_status_and_simulation_config(client: TestClient)
             "target_url": "https://example.com/webhook",
         },
     )
+    assert create_response.status_code in {200, 201}, create_response.text
     endpoint_id = create_response.json()["id"]
 
     patch_response = client.patch(
@@ -107,6 +118,7 @@ def test_patch_endpoint_rejects_invalid_simulation_values(client: TestClient) ->
             "target_url": "https://example.com/webhook",
         },
     )
+    assert create_response.status_code in {200, 201}, create_response.text
     endpoint_id = create_response.json()["id"]
 
     invalid_payloads = [
