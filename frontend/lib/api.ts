@@ -3,6 +3,8 @@ import {
   DeliveryListItem,
   Endpoint,
   EndpointStats,
+  TestWebhookReceiver,
+  TestWebhookRequest,
 } from "./types";
 
 function getBaseApiUrl(): string {
@@ -50,4 +52,12 @@ export async function getDeliveries(): Promise<DeliveryListItem[]> {
 
 export async function getDelivery(deliveryId: string): Promise<DeliveryDetail> {
   return apiFetch<DeliveryDetail>(`/deliveries/${deliveryId}`);
+}
+
+export async function getTestWebhookReceivers(): Promise<TestWebhookReceiver[]> {
+  return apiFetch<TestWebhookReceiver[]>("/test-webhooks");
+}
+
+export async function getTestWebhookRequests(receiverId: string): Promise<TestWebhookRequest[]> {
+  return apiFetch<TestWebhookRequest[]>(`/test-webhooks/${receiverId}/requests`);
 }

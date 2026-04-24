@@ -4,6 +4,7 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/endpoints", label: "Endpoints" },
   { href: "/deliveries", label: "Deliveries" },
+  { href: "/test-webhooks", label: "Test Webhooks" },
 ];
 
 export function Nav() {

@@ -80,3 +80,31 @@ def test_event_creation_with_simulation_config_creates_delivery(client: TestClie
     deliveries = deliveries_response.json()
     assert len(deliveries) == 1
     assert deliveries[0]["endpoint_id"] == endpoint["id"]
+
+
+def test_event_creation_enqueues_real_delivery_ids(client: TestClient) -> None:
+    endpoint_response = client.post(
+        "/endpoints",
+        json={
+            "name": "Queue target",
+            "target_url": "https://example.com/webhook",
+        },
+    )
+    assert endpoint_response.status_code == 201
+
+    event_response = client.post(
+        "/events",
+        json={
+            "event_type": "queue.test",
+            "payload": {"message": "hello"},
+        },
+    )
+
+    assert event_response.status_code == 201, event_response.text
+
+    deliveries_response = client.get("/deliveries")
+    assert deliveries_response.status_code == 200, deliveries_response.text
+    deliveries = deliveries_response.json()
+    assert len(deliveries) == 1
+    assert deliveries[0]["id"] is not None
+    assert deliveries[0]["id"] != "None"

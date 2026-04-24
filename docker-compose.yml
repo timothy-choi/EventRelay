@@ -39,6 +39,7 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://hookhub:hookhub@postgres:5432/hookhub
       REDIS_URL: redis://redis:6379/0
+      PUBLIC_API_URL: http://backend:8000
       USE_NETWORK_PROXY: "false"
     ports:
       - "8000:8000"

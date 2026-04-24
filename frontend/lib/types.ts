@@ -71,3 +71,20 @@ export type DeliveryDetail = {
   event_created_at: string;
   attempts: DeliveryAttempt[];
 };
+
+export type TestWebhookReceiver = {
+  id: string;
+  name: string;
+  url: string;
+  created_at: string;
+};
+
+export type TestWebhookRequest = {
+  id: string;
+  receiver_id: string;
+  method: string;
+  headers: Record<string, string>;
+  body: Record<string, unknown> | unknown[] | null;
+  raw_body: string | null;
+  received_at: string;
+};

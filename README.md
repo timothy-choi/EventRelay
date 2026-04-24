@@ -211,6 +211,34 @@ The stats response includes:
 - total attempts
 - failure type counts for timeouts, connection errors, HTTP 4xx, and HTTP 5xx
 
+## Built-in Test Webhook Receiver
+
+EventRelay includes a built-in test receiver so you can validate delivery without running your own webhook server.
+
+Flow:
+
+1. Create a test webhook receiver
+2. Copy the generated URL
+3. Create an EventRelay endpoint using that URL
+4. Send an event
+5. View the received request in the dashboard
+
+Create a receiver:
+
+```bash
+curl -X POST http://localhost:8000/test-webhooks \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My test receiver"
+  }'
+```
+
+List received requests:
+
+```bash
+curl http://localhost:8000/test-webhooks/<receiver_id>/requests
+```
+
 ## Frontend Dashboard
 
 A minimal Next.js dashboard is included for browsing endpoints, deliveries, attempts, and endpoint reliability stats.

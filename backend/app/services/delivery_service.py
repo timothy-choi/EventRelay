@@ -59,6 +59,7 @@ def create_delivery(
         last_error=None,
     )
     session.add(delivery)
+    session.flush()
     return delivery
 
 

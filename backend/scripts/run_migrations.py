@@ -42,6 +42,7 @@ def main() -> None:
           endpoint_columns = {column["name"] for column in inspector.get_columns("endpoints")}
           if SIMULATION_COLUMNS.issubset(endpoint_columns):
               run_alembic("stamp", "0002_endpoint_sim")
+              run_alembic("upgrade", "head")
           else:
               run_alembic("stamp", "0001_core")
               run_alembic("upgrade", "head")

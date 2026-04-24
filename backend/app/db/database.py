@@ -5,6 +5,7 @@ from collections.abc import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 DATABASE_URL = os.getenv(
@@ -18,12 +19,16 @@ class Base(DeclarativeBase):
     """Base SQLAlchemy model."""
 
 
-engine = create_engine(
-    DATABASE_URL,
-    future=True,
-    pool_pre_ping=not IS_SQLITE,
-    connect_args={"check_same_thread": False} if IS_SQLITE else {},
-)
+engine_kwargs = {
+    "future": True,
+    "pool_pre_ping": not IS_SQLITE,
+    "connect_args": {"check_same_thread": False} if IS_SQLITE else {},
+}
+
+if DATABASE_URL == "sqlite://":
+    engine_kwargs["poolclass"] = StaticPool
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
 
 

@@ -32,23 +32,22 @@ def create_event(payload: EventCreate, session: Session = Depends(get_db_session
         ).scalars()
     )
 
-    deliveries = []
+    delivery_ids = []
     for endpoint in active_endpoints:
         delivery = create_delivery(
             session,
             event_id=event.id,
             endpoint_id=endpoint.id,
         )
-        deliveries.append(delivery)
+        delivery_ids.append(delivery.id)
 
+    event_id = event.id
     session.commit()
-    session.refresh(event)
 
-    for delivery in deliveries:
-        session.refresh(delivery)
-        enqueue_delivery(redis_client, delivery.id)
+    for delivery_id in delivery_ids:
+        enqueue_delivery(redis_client, delivery_id)
 
-    return event
+    return session.get(Event, event_id)
 
 
 @router.get("", response_model=list[EventRead])

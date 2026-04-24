@@ -173,6 +173,21 @@ th {
   gap: 8px;
 }
 
+.text-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+}
+
+.nested-card {
+  box-shadow: none;
+  background: #faf6ef;
+}
+
 .inline-error,
 .error-box {
   color: var(--warn);
