@@ -80,6 +80,15 @@ a {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
+.chart-header {
+  margin-bottom: 12px;
+}
+
+.chart-shell {
+  width: 100%;
+  min-height: 220px;
+}
+
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -92,6 +101,14 @@ a {
   font-size: 2rem;
   font-weight: 700;
   margin-top: 8px;
+}
+
+.metric.compact {
+  font-size: 1.5rem;
+}
+
+.compact-stats {
+  margin-bottom: 12px;
 }
 
 .muted {
