@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
 
 
 revision = "0004_endpoint_rate"
@@ -17,16 +18,26 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "endpoints",
-        sa.Column(
-            "max_requests_per_second",
-            sa.Integer(),
-            nullable=False,
-            server_default=sa.text("0"),
-        ),
-    )
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [column["name"] for column in inspector.get_columns("endpoints")]
+
+    if "max_requests_per_second" not in columns:
+        op.add_column(
+            "endpoints",
+            sa.Column(
+                "max_requests_per_second",
+                sa.Integer(),
+                nullable=False,
+                server_default=sa.text("0"),
+            ),
+        )
 
 
 def downgrade() -> None:
-    op.drop_column("endpoints", "max_requests_per_second")
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [column["name"] for column in inspector.get_columns("endpoints")]
+
+    if "max_requests_per_second" in columns:
+        op.drop_column("endpoints", "max_requests_per_second")
