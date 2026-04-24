@@ -183,6 +183,30 @@ curl -X POST http://localhost:8000/endpoints \
 
 Endpoints without simulation values continue to behave the same way, using `0` for all simulation settings.
 
+## Database Migrations
+
+This project uses Alembic for PostgreSQL schema migrations.
+
+Run migrations locally:
+
+```bash
+export DATABASE_URL=postgresql+psycopg://hookhub:hookhub@localhost:5432/hookhub
+alembic upgrade head
+```
+
+Create a new migration:
+
+```bash
+export DATABASE_URL=postgresql+psycopg://hookhub:hookhub@localhost:5432/hookhub
+alembic revision -m "describe the change"
+```
+
+If you want Alembic to compare the current models against the database automatically, use:
+
+```bash
+alembic revision --autogenerate -m "describe the change"
+```
+
 ## Next Planned Features
 
 - Replay failed deliveries
