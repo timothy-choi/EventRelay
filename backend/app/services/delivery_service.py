@@ -90,6 +90,7 @@ def schedule_retry(
     delivery: Delivery,
     retry_delay: int,
 ) -> None:
+    delivery_id = delivery.id
     delivery.status = DeliveryStatus.retrying.value
     delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=retry_delay)
     delivery.updated_at = datetime.now(timezone.utc)
@@ -97,7 +98,7 @@ def schedule_retry(
 
     async def _requeue() -> None:
         await asyncio.sleep(retry_delay)
-        enqueue_delivery(redis_client, delivery.id)
+        enqueue_delivery(redis_client, delivery_id)
 
     asyncio.create_task(_requeue())
 

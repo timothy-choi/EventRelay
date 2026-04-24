@@ -76,6 +76,9 @@ def classify_error(
 
     if response is None:
         return None
+    proxy_failure_type = response.headers.get("X-EventRelay-Proxy-Failure-Type")
+    if proxy_failure_type in {"timeout", "connection_error", "dns_error", "unknown_error"}:
+        return proxy_failure_type
     if 400 <= response.status_code < 500:
         return "http_4xx"
     if 500 <= response.status_code < 600:
@@ -126,6 +129,15 @@ def build_error_message(
         return f"{failure_type}: request failed"
 
     if response is not None:
+        proxy_failure_type = response.headers.get("X-EventRelay-Proxy-Failure-Type")
+        if proxy_failure_type == "connection_error":
+            return "connection_error: connection failed"
+        if proxy_failure_type == "timeout":
+            return "timeout: request timed out"
+        if proxy_failure_type == "dns_error":
+            return "dns_error: DNS lookup failed"
+        if proxy_failure_type == "unknown_error":
+            return "unknown_error: request failed"
         if failure_type in {"http_4xx", "http_5xx"}:
             return f"{failure_type}: {response.status_code}"
         return f"{failure_type}: {response.status_code}"

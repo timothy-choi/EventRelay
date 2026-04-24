@@ -29,6 +29,11 @@ proxy/
   main.go
   Dockerfile
   README.md
+frontend/
+  app/
+  components/
+  lib/
+  Dockerfile
 ```
 
 ## Local Setup
@@ -45,7 +50,13 @@ docker-compose up --build
 http://localhost:8000
 ```
 
-3. Health check:
+3. Dashboard will be available at:
+
+```text
+http://localhost:3000
+```
+
+4. Health check:
 
 ```bash
 curl http://localhost:8000/health
@@ -199,6 +210,34 @@ The stats response includes:
 - p95 latency
 - total attempts
 - failure type counts for timeouts, connection errors, HTTP 4xx, and HTTP 5xx
+
+## Frontend Dashboard
+
+A minimal Next.js dashboard is included for browsing endpoints, deliveries, attempts, and endpoint reliability stats.
+
+Run the full stack:
+
+```bash
+docker compose up --build
+```
+
+The backend and worker containers automatically run `alembic upgrade head` on startup, so local Docker environments stay aligned with the current Postgres schema before serving requests.
+If a local Docker Postgres volume already contains pre-Alembic tables, the startup bootstrap stamps the existing schema to the matching migration revision before upgrading.
+
+Frontend environment:
+
+```text
+NEXT_PUBLIC_API_URL=http://localhost:8000
+INTERNAL_API_URL=http://backend:8000
+```
+
+Available pages:
+
+- `/` dashboard home with total endpoints, recent deliveries, and success/failure counts
+- `/endpoints` endpoint list with simulation config and deactivate action
+- `/endpoints/<endpoint_id>` endpoint detail with reliability stats
+- `/deliveries` delivery list
+- `/deliveries/<delivery_id>` delivery detail with attempts and replay action
 
 ## Database Migrations
 

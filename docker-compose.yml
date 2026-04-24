@@ -52,7 +52,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-    command: ["python", "-m", "backend.app.worker.worker"]
+    command: ["/app/backend/scripts/start-worker.sh"]
     environment:
       DATABASE_URL: postgresql+psycopg://hookhub:hookhub@postgres:5432/hookhub
       REDIS_URL: redis://redis:6379/0
@@ -67,6 +67,19 @@ services:
       redis:
         condition: service_healthy
       proxy:
+        condition: service_started
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
         condition: service_started
 
 volumes:

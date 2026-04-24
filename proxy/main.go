@@ -79,7 +79,8 @@ func handleProxy(w http.ResponseWriter, r *http.Request, rng *rand.Rand) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		log.Printf("proxy target=%s latency_ms=%d injected_timeout=false injected_failure=false forward_error=%v", targetURL, latencyMs, err)
-		http.Error(w, "failed to forward request", http.StatusBadGateway)
+		w.Header().Set("X-EventRelay-Proxy-Failure-Type", "connection_error")
+		http.Error(w, "proxy connection failed", http.StatusBadGateway)
 		return
 	}
 	defer resp.Body.Close()

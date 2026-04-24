@@ -12,4 +12,6 @@ COPY backend /app/backend
 
 ENV PYTHONPATH=/app
 
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN chmod +x /app/backend/scripts/start-api.sh /app/backend/scripts/start-worker.sh
+
+CMD ["/app/backend/scripts/start-api.sh"]
