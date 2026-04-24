@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 
-from sqlalchemy import create_engine, inspect
+from sqlalchemy import create_engine, inspect, text
 
 
 CORE_TABLES = {"endpoints", "events", "deliveries", "delivery_attempts"}
@@ -13,6 +13,7 @@ SIMULATION_COLUMNS = {
     "simulation_failure_rate",
     "simulation_timeout_rate",
 }
+MIGRATION_LOCK_ID = 482001
 
 
 def run_alembic(*args: str) -> None:
@@ -27,26 +28,35 @@ def main() -> None:
     engine = create_engine(database_url)
 
     with engine.connect() as connection:
-      inspector = inspect(connection)
-      tables = set(inspector.get_table_names())
+        has_advisory_lock = engine.dialect.name == "postgresql"
 
-      if "alembic_version" in tables:
-          run_alembic("upgrade", "head")
-          return
+        if has_advisory_lock:
+            connection.execute(text("SELECT pg_advisory_lock(:lock_id)"), {"lock_id": MIGRATION_LOCK_ID})
 
-      if not CORE_TABLES.intersection(tables):
-          run_alembic("upgrade", "head")
-          return
+        try:
+            inspector = inspect(connection)
+            tables = set(inspector.get_table_names())
 
-      if CORE_TABLES.issubset(tables):
-          endpoint_columns = {column["name"] for column in inspector.get_columns("endpoints")}
-          if SIMULATION_COLUMNS.issubset(endpoint_columns):
-              run_alembic("stamp", "0002_endpoint_sim")
-              run_alembic("upgrade", "head")
-          else:
-              run_alembic("stamp", "0001_core")
-              run_alembic("upgrade", "head")
-          return
+            if "alembic_version" in tables:
+                run_alembic("upgrade", "head")
+                return
+
+            if not CORE_TABLES.intersection(tables):
+                run_alembic("upgrade", "head")
+                return
+
+            if CORE_TABLES.issubset(tables):
+                endpoint_columns = {column["name"] for column in inspector.get_columns("endpoints")}
+                if SIMULATION_COLUMNS.issubset(endpoint_columns):
+                    run_alembic("stamp", "0002_endpoint_sim")
+                    run_alembic("upgrade", "head")
+                else:
+                    run_alembic("stamp", "0001_core")
+                    run_alembic("upgrade", "head")
+                return
+        finally:
+            if has_advisory_lock:
+                connection.execute(text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": MIGRATION_LOCK_ID})
 
     print(
         "Existing database schema is partially initialized and cannot be safely auto-stamped.",

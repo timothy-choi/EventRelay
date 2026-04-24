@@ -259,6 +259,36 @@ Worker logs now include:
 
 This makes it easier to trace delivery outcomes under network stress.
 
+## CI/CD
+
+GitHub Actions validates EventRelay in two layers:
+
+- `pytest` covers unit and integration behavior for the backend and worker services
+- a full Docker Compose smoke test boots the entire stack and exercises one real end-to-end flow
+
+The smoke test starts:
+
+- `postgres`
+- `redis`
+- `backend`
+- `worker`
+- `proxy`
+- `frontend`
+
+It then verifies:
+
+- backend health at `http://localhost:8000/health`
+- frontend responds at `http://localhost:3000`
+- the API can create a built-in test receiver
+- an endpoint can target that built-in receiver through Docker networking
+- an event travels through `API -> queue -> worker -> proxy -> built-in receiver`
+
+Run the same check locally:
+
+```bash
+./scripts/full_app_smoke_test.sh
+```
+
 ## Built-in Test Webhook Receiver
 
 EventRelay includes an internal receiver for fast local debugging.

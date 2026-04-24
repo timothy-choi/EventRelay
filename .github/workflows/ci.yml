@@ -55,3 +55,15 @@ jobs:
 
       - name: Run tests against fresh Postgres
         run: pytest -q backend/tests
+
+  full-app-smoke-test:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run full app smoke test
+        run: |
+          chmod +x scripts/full_app_smoke_test.sh
+          ./scripts/full_app_smoke_test.sh

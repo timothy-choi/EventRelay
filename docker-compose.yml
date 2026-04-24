@@ -31,6 +31,11 @@ services:
       dockerfile: proxy/Dockerfile
     ports:
       - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z localhost 8080"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build:
@@ -43,6 +48,17 @@ services:
       USE_NETWORK_PROXY: "false"
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,7 +84,7 @@ services:
       redis:
         condition: service_healthy
       proxy:
-        condition: service_started
+        condition: service_healthy
 
   frontend:
     build:
@@ -78,9 +94,14 @@ services:
       NEXT_PUBLIC_API_URL: http://backend:8000
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   postgres_data:
