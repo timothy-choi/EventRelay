@@ -22,6 +22,9 @@ def create_endpoint(payload: EndpointCreate, session: Session = Depends(get_db_s
         target_url=str(payload.target_url),
         signing_secret=secrets.token_hex(32),
         is_active=True,
+        simulation_latency_ms=payload.simulation_latency_ms,
+        simulation_failure_rate=payload.simulation_failure_rate,
+        simulation_timeout_rate=payload.simulation_timeout_rate,
     )
     session.add(endpoint)
     session.commit()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, String, Uuid
+from sqlalchemy import Boolean, DateTime, Integer, String, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.app.db.database import Base
@@ -17,6 +17,9 @@ class Endpoint(Base):
     target_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     signing_secret: Mapped[str] = mapped_column(String(128), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    simulation_latency_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    simulation_failure_rate: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    simulation_timeout_rate: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

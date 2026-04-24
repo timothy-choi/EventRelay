@@ -16,9 +16,6 @@ from backend.app.models.event import Event
 
 USE_NETWORK_PROXY = os.getenv("USE_NETWORK_PROXY", "false").lower() == "true"
 NETWORK_PROXY_URL = os.getenv("NETWORK_PROXY_URL", "http://proxy:8080/proxy")
-DEFAULT_PROXY_LATENCY_MS = os.getenv("NETWORK_PROXY_LATENCY_MS", "300")
-DEFAULT_PROXY_TIMEOUT_RATE = os.getenv("NETWORK_PROXY_TIMEOUT_RATE", "0")
-DEFAULT_PROXY_FAILURE_RATE = os.getenv("NETWORK_PROXY_FAILURE_RATE", "0")
 
 
 @dataclass
@@ -163,9 +160,9 @@ def build_delivery_headers(endpoint: Endpoint, event: Event, raw_body: bytes) ->
         headers.update(
             {
                 "X-EventRelay-Target-Url": endpoint.target_url,
-                "X-EventRelay-Latency-Ms": DEFAULT_PROXY_LATENCY_MS,
-                "X-EventRelay-Timeout-Rate": DEFAULT_PROXY_TIMEOUT_RATE,
-                "X-EventRelay-Failure-Rate": DEFAULT_PROXY_FAILURE_RATE,
+                "X-EventRelay-Latency-Ms": str(getattr(endpoint, "simulation_latency_ms", 0) or 0),
+                "X-EventRelay-Timeout-Rate": str(getattr(endpoint, "simulation_timeout_rate", 0) or 0),
+                "X-EventRelay-Failure-Rate": str(getattr(endpoint, "simulation_failure_rate", 0) or 0),
             }
         )
     return headers

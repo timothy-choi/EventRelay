@@ -64,6 +64,20 @@ curl -X POST http://localhost:8000/endpoints \
   }'
 ```
 
+Create an endpoint with simulation settings:
+
+```bash
+curl -X POST http://localhost:8000/endpoints \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "failure-test",
+    "target_url": "http://host.docker.internal:9000/webhook",
+    "simulation_latency_ms": 100,
+    "simulation_failure_rate": 50,
+    "simulation_timeout_rate": 0
+  }'
+```
+
 List endpoints:
 
 ```bash
@@ -144,6 +158,30 @@ Proxy logs include:
 - latency applied
 - whether a failure was injected
 - forwarded response status
+
+## Network Simulation Per Endpoint
+
+Each endpoint can define its own network simulation settings, which the worker forwards to the proxy when `USE_NETWORK_PROXY=true`.
+
+Example:
+
+```bash
+curl -X POST http://localhost:8000/endpoints \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "failure-test",
+    "target_url": "http://host.docker.internal:9000/webhook",
+    "simulation_latency_ms": 100,
+    "simulation_failure_rate": 50,
+    "simulation_timeout_rate": 0
+  }'
+```
+
+- `simulation_latency_ms` adds delay before forwarding the webhook.
+- `simulation_failure_rate` injects synthetic `503` responses without forwarding.
+- `simulation_timeout_rate` simulates delivery timeouts by delaying long enough for the worker request to time out.
+
+Endpoints without simulation values continue to behave the same way, using `0` for all simulation settings.
 
 ## Next Planned Features
 
