@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import socket
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from time import perf_counter
@@ -38,23 +39,102 @@ def build_signature(secret: str, timestamp: str, raw_body: bytes) -> str:
     return f"sha256={digest}"
 
 
-def classify_failure(status_code: int | None, exc: Exception | None = None) -> tuple[str, str | None]:
+def iter_exception_chain(exc: BaseException) -> list[BaseException]:
+    chain: list[BaseException] = []
+    current: BaseException | None = exc
+    seen: set[int] = set()
+
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        chain.append(current)
+        current = current.__cause__ or current.__context__
+
+    return chain
+
+
+def classify_error(
+    *,
+    response: httpx.Response | None = None,
+    exc: Exception | None = None,
+) -> str | None:
     if exc is not None:
         if isinstance(exc, httpx.TimeoutException):
-            return "retrying", "timeout"
+            return "timeout"
         if isinstance(exc, httpx.ConnectError):
-            return "retrying", "connection_error"
-        return "retrying", "request_error"
+            if _is_dns_error(exc):
+                return "dns_error"
+            return "connection_error"
+        if isinstance(exc, httpx.RequestError):
+            if _is_dns_error(exc):
+                return "dns_error"
+            return "connection_error"
+        return "unknown_error"
 
-    if status_code is None:
-        return "retrying", "unknown"
-    if 200 <= status_code < 300:
-        return "succeeded", None
-    if 400 <= status_code < 500:
-        return "failed", "client_error"
-    if 500 <= status_code < 600:
-        return "retrying", "server_error"
-    return "retrying", "unexpected_response"
+    if response is None:
+        return None
+    if 400 <= response.status_code < 500:
+        return "http_4xx"
+    if 500 <= response.status_code < 600:
+        return "http_5xx"
+    return None
+
+
+def is_retryable_failure(failure_type: str | None) -> bool:
+    return failure_type in {"timeout", "connection_error", "dns_error", "http_5xx"}
+
+
+def _is_dns_error(exc: Exception) -> bool:
+    dns_markers = (
+        "name or service not known",
+        "nodename nor servname provided",
+        "temporary failure in name resolution",
+        "getaddrinfo failed",
+        "no address associated with hostname",
+        "failed to resolve",
+    )
+    for current in iter_exception_chain(exc):
+        if isinstance(current, socket.gaierror):
+            return True
+        message = " ".join(str(arg) for arg in current.args if arg).lower()
+        if any(marker in message for marker in dns_markers):
+            return True
+    return False
+
+
+def build_error_message(
+    *,
+    response: httpx.Response | None = None,
+    exc: Exception | None = None,
+    failure_type: str | None = None,
+) -> str | None:
+    if failure_type is None:
+        return None
+
+    if exc is not None:
+        if failure_type == "connection_error":
+            return "connection_error: connection failed"
+        if failure_type == "timeout":
+            return "timeout: request timed out"
+        if failure_type == "dns_error":
+            return "dns_error: DNS lookup failed"
+        if failure_type == "unknown_error":
+            return "unknown_error: request failed"
+        return f"{failure_type}: request failed"
+
+    if response is not None:
+        if failure_type in {"http_4xx", "http_5xx"}:
+            return f"{failure_type}: {response.status_code}"
+        return f"{failure_type}: {response.status_code}"
+
+    return f"{failure_type}: unexpected error"
+
+
+def resolve_delivery_status(failure_type: str | None) -> str:
+    if failure_type is None:
+        return "succeeded"
+    if is_retryable_failure(failure_type):
+        return "retrying"
+    return "failed"
 
 
 async def send_webhook(endpoint: Endpoint, event: Event, timeout_seconds: float = 10.0) -> WebhookSendResult:
@@ -73,21 +153,21 @@ async def send_webhook(endpoint: Endpoint, event: Event, timeout_seconds: float 
         async with httpx.AsyncClient(timeout=timeout_seconds) as client:
             response = await client.post(endpoint.target_url, content=raw_body, headers=headers)
         latency_ms = int((perf_counter() - start) * 1000)
-        status, failure_type = classify_failure(response.status_code)
+        failure_type = classify_error(response=response)
         return WebhookSendResult(
-            status=status,
+            status=resolve_delivery_status(failure_type),
             response_code=response.status_code,
             latency_ms=latency_ms,
             failure_type=failure_type,
-            error_message=None if failure_type is None else f"Webhook returned HTTP {response.status_code}",
+            error_message=build_error_message(response=response, failure_type=failure_type),
         )
     except httpx.HTTPError as exc:
         latency_ms = int((perf_counter() - start) * 1000)
-        status, failure_type = classify_failure(None, exc)
+        failure_type = classify_error(exc=exc)
         return WebhookSendResult(
-            status=status,
+            status=resolve_delivery_status(failure_type),
             response_code=None,
             latency_ms=latency_ms,
             failure_type=failure_type,
-            error_message=str(exc),
+            error_message=build_error_message(exc=exc, failure_type=failure_type),
         )

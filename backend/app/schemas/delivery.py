@@ -3,10 +3,12 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class DeliveryAttemptRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     attempt_number: int
     status: str
@@ -19,6 +21,8 @@ class DeliveryAttemptRead(BaseModel):
 
 
 class DeliveryListItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     status: str
     total_attempts: int
@@ -34,6 +38,8 @@ class DeliveryListItem(BaseModel):
 
 
 class DeliveryDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: uuid.UUID
     status: str
     total_attempts: int

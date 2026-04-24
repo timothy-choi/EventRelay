@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, HttpUrl
 
@@ -19,3 +20,7 @@ class EndpointRead(BaseModel):
     target_url: str
     is_active: bool
     created_at: datetime
+
+
+class EndpointUpdate(BaseModel):
+    is_active: Optional[bool] = None

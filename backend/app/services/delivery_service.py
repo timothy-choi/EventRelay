@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session, joinedload
 from backend.app.models.delivery import Delivery, DeliveryStatus
 from backend.app.models.delivery_attempt import DeliveryAttempt
 from backend.app.services.queue_service import enqueue_delivery
-from backend.app.services.webhook_sender import WebhookSendResult, send_webhook
+from backend.app.services.webhook_sender import (
+    WebhookSendResult,
+    is_retryable_failure,
+    send_webhook,
+)
 
 
 RETRY_DELAYS_SECONDS = {
@@ -40,6 +44,24 @@ def get_delivery_by_id(session: Session, delivery_id: UUID) -> Delivery | None:
     return session.execute(statement).unique().scalar_one_or_none()
 
 
+def create_delivery(
+    session: Session,
+    *,
+    event_id: UUID,
+    endpoint_id: UUID,
+) -> Delivery:
+    delivery = Delivery(
+        event_id=event_id,
+        endpoint_id=endpoint_id,
+        status=DeliveryStatus.pending.value,
+        total_attempts=0,
+        next_retry_at=None,
+        last_error=None,
+    )
+    session.add(delivery)
+    return delivery
+
+
 def create_attempt_record(
     session: Session,
     delivery: Delivery,
@@ -62,6 +84,24 @@ def create_attempt_record(
     return attempt
 
 
+def schedule_retry(
+    session: Session,
+    redis_client,
+    delivery: Delivery,
+    retry_delay: int,
+) -> None:
+    delivery.status = DeliveryStatus.retrying.value
+    delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=retry_delay)
+    delivery.updated_at = datetime.now(timezone.utc)
+    session.commit()
+
+    async def _requeue() -> None:
+        await asyncio.sleep(retry_delay)
+        enqueue_delivery(redis_client, delivery.id)
+
+    asyncio.create_task(_requeue())
+
+
 async def process_delivery(session: Session, redis_client, delivery_id: UUID) -> None:
     delivery = get_delivery_by_id(session, delivery_id)
     if delivery is None:
@@ -70,6 +110,7 @@ async def process_delivery(session: Session, redis_client, delivery_id: UUID) ->
     if not delivery.endpoint.is_active:
         delivery.status = DeliveryStatus.failed.value
         delivery.last_error = "Endpoint is inactive"
+        delivery.next_retry_at = None
         delivery.updated_at = datetime.now(timezone.utc)
         session.commit()
         return
@@ -100,7 +141,8 @@ async def process_delivery(session: Session, redis_client, delivery_id: UUID) ->
         session.commit()
         return
 
-    if attempt_number >= MAX_ATTEMPTS or result.status == DeliveryStatus.failed.value:
+    retryable = is_retryable_failure(result.failure_type)
+    if attempt_number >= MAX_ATTEMPTS or not retryable:
         delivery.status = DeliveryStatus.failed.value
         delivery.next_retry_at = None
         session.commit()
@@ -113,9 +155,4 @@ async def process_delivery(session: Session, redis_client, delivery_id: UUID) ->
         session.commit()
         return
 
-    delivery.status = DeliveryStatus.retrying.value
-    delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=retry_delay)
-    session.commit()
-
-    await asyncio.sleep(retry_delay)
-    enqueue_delivery(redis_client, delivery.id)
+    schedule_retry(session, redis_client, delivery, retry_delay)

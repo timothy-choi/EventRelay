@@ -2,45 +2,19 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db_session
 from backend.app.schemas.delivery import DeliveryAttemptRead, DeliveryDetail, DeliveryListItem
-from backend.app.services.delivery_service import get_delivery_by_id, list_delivery_rows
+from backend.app.services.delivery_service import create_delivery, get_delivery_by_id, list_delivery_rows
+from backend.app.services.queue_service import enqueue_delivery, get_redis_client
 
 
 router = APIRouter(prefix="/deliveries", tags=["deliveries"])
 
 
-@router.get("", response_model=list[DeliveryListItem])
-def list_deliveries(session: Session = Depends(get_db_session)) -> list[DeliveryListItem]:
-    deliveries = session.execute(list_delivery_rows()).unique().scalars().all()
-    return [
-        DeliveryListItem(
-            id=delivery.id,
-            status=delivery.status,
-            total_attempts=delivery.total_attempts,
-            next_retry_at=delivery.next_retry_at,
-            last_error=delivery.last_error,
-            created_at=delivery.created_at,
-            updated_at=delivery.updated_at,
-            endpoint_id=delivery.endpoint.id,
-            endpoint_name=delivery.endpoint.name,
-            endpoint_target_url=delivery.endpoint.target_url,
-            event_id=delivery.event.id,
-            event_type=delivery.event.event_type,
-        )
-        for delivery in deliveries
-    ]
-
-
-@router.get("/{delivery_id}", response_model=DeliveryDetail)
-def get_delivery(delivery_id: UUID, session: Session = Depends(get_db_session)) -> DeliveryDetail:
-    delivery = get_delivery_by_id(session, delivery_id)
-    if delivery is None:
-        raise HTTPException(status_code=404, detail="Delivery not found")
-
+def serialize_delivery_detail(delivery) -> DeliveryDetail:
     return DeliveryDetail(
         id=delivery.id,
         status=delivery.status,
@@ -71,3 +45,58 @@ def get_delivery(delivery_id: UUID, session: Session = Depends(get_db_session)) 
             for attempt in delivery.attempts
         ],
     )
+
+
+@router.get("", response_model=list[DeliveryListItem])
+def list_deliveries(session: Session = Depends(get_db_session)) -> list[DeliveryListItem]:
+    deliveries = session.execute(list_delivery_rows()).unique().scalars().all()
+    return [
+        DeliveryListItem(
+            id=delivery.id,
+            status=delivery.status,
+            total_attempts=delivery.total_attempts,
+            next_retry_at=delivery.next_retry_at,
+            last_error=delivery.last_error,
+            created_at=delivery.created_at,
+            updated_at=delivery.updated_at,
+            endpoint_id=delivery.endpoint.id,
+            endpoint_name=delivery.endpoint.name,
+            endpoint_target_url=delivery.endpoint.target_url,
+            event_id=delivery.event.id,
+            event_type=delivery.event.event_type,
+        )
+        for delivery in deliveries
+    ]
+
+
+@router.get("/{delivery_id}", response_model=DeliveryDetail)
+def get_delivery(delivery_id: UUID, session: Session = Depends(get_db_session)) -> DeliveryDetail:
+    delivery = get_delivery_by_id(session, delivery_id)
+    if delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    return serialize_delivery_detail(delivery)
+
+
+@router.post("/{delivery_id}/replay", response_model=DeliveryDetail, status_code=status.HTTP_201_CREATED)
+def replay_delivery(delivery_id: UUID, session: Session = Depends(get_db_session)) -> DeliveryDetail:
+    original_delivery = get_delivery_by_id(session, delivery_id)
+    if original_delivery is None:
+        raise HTTPException(status_code=404, detail="Delivery not found")
+
+    replayed_delivery = create_delivery(
+        session,
+        event_id=original_delivery.event_id,
+        endpoint_id=original_delivery.endpoint_id,
+    )
+    session.commit()
+    session.refresh(replayed_delivery)
+
+    redis_client = get_redis_client()
+    enqueue_delivery(redis_client, replayed_delivery.id)
+
+    delivery = get_delivery_by_id(session, replayed_delivery.id)
+    if delivery is None:
+        raise HTTPException(status_code=500, detail="Replayed delivery could not be loaded")
+
+    return serialize_delivery_detail(delivery)

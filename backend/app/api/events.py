@@ -5,10 +5,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db_session
-from backend.app.models.delivery import Delivery, DeliveryStatus
 from backend.app.models.endpoint import Endpoint
 from backend.app.models.event import Event
 from backend.app.schemas.event import EventCreate, EventRead
+from backend.app.services.delivery_service import create_delivery
 from backend.app.services.queue_service import enqueue_delivery, get_redis_client
 
 
@@ -32,15 +32,13 @@ def create_event(payload: EventCreate, session: Session = Depends(get_db_session
         ).scalars()
     )
 
-    deliveries: list[Delivery] = []
+    deliveries = []
     for endpoint in active_endpoints:
-        delivery = Delivery(
+        delivery = create_delivery(
+            session,
             event_id=event.id,
             endpoint_id=endpoint.id,
-            status=DeliveryStatus.pending.value,
-            total_attempts=0,
         )
-        session.add(delivery)
         deliveries.append(delivery)
 
     session.commit()
