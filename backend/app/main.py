@@ -1,0 +1,28 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from backend.app.api.deliveries import router as deliveries_router
+from backend.app.api.endpoints import router as endpoints_router
+from backend.app.api.events import router as events_router
+from backend.app.db.database import init_db
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(title="EventRelay", version="0.1.0", lifespan=lifespan)
+
+app.include_router(endpoints_router)
+app.include_router(events_router)
+app.include_router(deliveries_router)
+
+
+@app.get("/health", tags=["health"])
+def healthcheck() -> dict[str, str]:
+    return {"status": "ok"}
