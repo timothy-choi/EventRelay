@@ -10,7 +10,12 @@ from sqlalchemy.orm import Session, joinedload
 
 from backend.app.models.delivery import Delivery, DeliveryStatus
 from backend.app.models.delivery_attempt import DeliveryAttempt
-from backend.app.services.queue_service import enqueue_delivery
+from backend.app.services.queue_service import (
+    consume_rate_limit_slot,
+    enqueue_delivery,
+    get_queue_depth,
+    increment_metric_counter,
+)
 from backend.app.services.webhook_sender import (
     WebhookSendResult,
     is_retryable_failure,
@@ -23,6 +28,9 @@ RETRY_DELAYS_SECONDS = {
     2: 120,
 }
 MAX_ATTEMPTS = 3
+BACKPRESSURE_QUEUE_THRESHOLD = 100
+BACKPRESSURE_DELAY_SECONDS = 0.05
+RATE_LIMIT_RETRY_SECONDS = 1
 logger = logging.getLogger(__name__)
 
 
@@ -106,6 +114,29 @@ def schedule_retry(
     asyncio.create_task(_requeue())
 
 
+def schedule_deferred_delivery(
+    session: Session,
+    redis_client,
+    delivery: Delivery,
+    delay_seconds: int,
+    *,
+    status: str,
+    last_error: str | None = None,
+) -> None:
+    delivery_id = delivery.id
+    delivery.status = status
+    delivery.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay_seconds)
+    delivery.last_error = last_error
+    delivery.updated_at = datetime.now(timezone.utc)
+    session.commit()
+
+    async def _requeue() -> None:
+        await asyncio.sleep(delay_seconds)
+        enqueue_delivery(redis_client, delivery_id)
+
+    asyncio.create_task(_requeue())
+
+
 async def process_delivery(session: Session, redis_client, delivery_id: UUID) -> None:
     delivery = get_delivery_by_id(session, delivery_id)
     if delivery is None:
@@ -127,6 +158,31 @@ async def process_delivery(session: Session, redis_client, delivery_id: UUID) ->
             delivery.status,
         )
         return
+
+    queue_depth = get_queue_depth(redis_client)
+    if queue_depth > BACKPRESSURE_QUEUE_THRESHOLD:
+        increment_metric_counter(redis_client, "delayed_due_to_backpressure_count")
+        await asyncio.sleep(BACKPRESSURE_DELAY_SECONDS)
+
+    max_requests_per_second = getattr(delivery.endpoint, "max_requests_per_second", 0) or 0
+    if max_requests_per_second > 0:
+        slot_count = consume_rate_limit_slot(redis_client, delivery.endpoint.id)
+        if slot_count > max_requests_per_second:
+            increment_metric_counter(redis_client, "rate_limited_count")
+            schedule_deferred_delivery(
+                session,
+                redis_client,
+                delivery,
+                RATE_LIMIT_RETRY_SECONDS,
+                status=DeliveryStatus.pending.value,
+                last_error="rate_limited",
+            )
+            logger.info(
+                "rate_limited endpoint=%s scheduled_retry_at=%s",
+                delivery.endpoint.id,
+                delivery.next_retry_at,
+            )
+            return
 
     attempt_number = delivery.total_attempts + 1
     delivery.status = DeliveryStatus.delivering.value

@@ -1,0 +1,126 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+import pytest
+
+from backend.app.models.endpoint import Endpoint
+from backend.app.models.event import Event
+from backend.app.services.delivery_service import create_delivery, get_delivery_by_id, process_delivery
+from backend.app.services.webhook_sender import WebhookSendResult
+
+
+@pytest.mark.asyncio
+async def test_rate_limited_endpoint_delays_extra_deliveries(db_session, fake_redis, monkeypatch) -> None:
+    endpoint = Endpoint(
+        name="rate-limited",
+        target_url="https://example.com/webhook",
+        signing_secret="secret",
+        is_active=True,
+        max_requests_per_second=1,
+        simulation_latency_ms=0,
+        simulation_failure_rate=0,
+        simulation_timeout_rate=0,
+    )
+    events = [
+        Event(event_type="rate.limit.one", payload={"i": 1}),
+        Event(event_type="rate.limit.two", payload={"i": 2}),
+    ]
+    db_session.add(endpoint)
+    db_session.add_all(events)
+    db_session.flush()
+
+    first_delivery = create_delivery(db_session, event_id=events[0].id, endpoint_id=endpoint.id)
+    second_delivery = create_delivery(db_session, event_id=events[1].id, endpoint_id=endpoint.id)
+    db_session.commit()
+
+    send_calls: list[str] = []
+
+    async def fake_send_webhook(*_args, **_kwargs) -> WebhookSendResult:
+        send_calls.append("sent")
+        return WebhookSendResult(
+            status="succeeded",
+            response_code=200,
+            latency_ms=25,
+            failure_type=None,
+            error_message=None,
+        )
+
+    def discard_task(coro):
+        coro.close()
+        return None
+
+    monkeypatch.setattr("backend.app.services.delivery_service.send_webhook", fake_send_webhook)
+    monkeypatch.setattr("backend.app.services.delivery_service.asyncio.create_task", discard_task)
+    monkeypatch.setattr("backend.app.services.queue_service.time.time", lambda: 1000)
+
+    await process_delivery(db_session, fake_redis, first_delivery.id)
+    await process_delivery(db_session, fake_redis, second_delivery.id)
+
+    db_session.expire_all()
+    refreshed_first = get_delivery_by_id(db_session, first_delivery.id)
+    refreshed_second = get_delivery_by_id(db_session, second_delivery.id)
+
+    assert refreshed_first is not None
+    assert refreshed_second is not None
+    assert refreshed_first.status == "succeeded"
+    assert refreshed_first.total_attempts == 1
+    assert refreshed_second.status == "pending"
+    assert refreshed_second.total_attempts == 0
+    assert refreshed_second.next_retry_at is not None
+    assert fake_redis.get("metrics:rate_limited_count") == "1"
+    assert len(send_calls) == 1
+
+
+@pytest.mark.asyncio
+async def test_unlimited_endpoint_is_not_throttled(db_session, fake_redis, monkeypatch) -> None:
+    endpoint = Endpoint(
+        name="unlimited",
+        target_url="https://example.com/webhook",
+        signing_secret="secret",
+        is_active=True,
+        max_requests_per_second=0,
+        simulation_latency_ms=0,
+        simulation_failure_rate=0,
+        simulation_timeout_rate=0,
+    )
+    events = [
+        Event(event_type="unlimited.one", payload={"i": 1}),
+        Event(event_type="unlimited.two", payload={"i": 2}),
+    ]
+    db_session.add(endpoint)
+    db_session.add_all(events)
+    db_session.flush()
+
+    first_delivery = create_delivery(db_session, event_id=events[0].id, endpoint_id=endpoint.id)
+    second_delivery = create_delivery(db_session, event_id=events[1].id, endpoint_id=endpoint.id)
+    db_session.commit()
+
+    send_calls: list[str] = []
+
+    async def fake_send_webhook(*_args, **_kwargs) -> WebhookSendResult:
+        send_calls.append("sent")
+        return WebhookSendResult(
+            status="succeeded",
+            response_code=200,
+            latency_ms=10,
+            failure_type=None,
+            error_message=None,
+        )
+
+    monkeypatch.setattr("backend.app.services.delivery_service.send_webhook", fake_send_webhook)
+
+    await process_delivery(db_session, fake_redis, first_delivery.id)
+    await process_delivery(db_session, fake_redis, second_delivery.id)
+
+    db_session.expire_all()
+    refreshed_first = get_delivery_by_id(db_session, first_delivery.id)
+    refreshed_second = get_delivery_by_id(db_session, second_delivery.id)
+
+    assert refreshed_first is not None
+    assert refreshed_second is not None
+    assert refreshed_first.status == "succeeded"
+    assert refreshed_second.status == "succeeded"
+    assert refreshed_first.next_retry_at is None
+    assert refreshed_second.next_retry_at is None
+    assert len(send_calls) == 2

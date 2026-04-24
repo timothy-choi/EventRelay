@@ -10,3 +10,6 @@ class SystemStatsRead(BaseModel):
     success_rate: float
     avg_latency_ms: float | None
     p95_latency_ms: float | None
+    rate_limited_count: int
+    delayed_due_to_backpressure_count: int
+    current_queue_depth: int

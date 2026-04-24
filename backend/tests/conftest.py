@@ -4,6 +4,7 @@ import os
 import sys
 from collections.abc import Generator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -22,7 +23,7 @@ else:
     os.environ["DATABASE_URL"] = DEFAULT_TEST_DATABASE_URL
 os.environ.setdefault("REDIS_URL", "redis://localhost:6379/0")
 
-from backend.app.api import deliveries, events  # noqa: E402
+from backend.app.api import deliveries, events, system  # noqa: E402
 from backend.app.db.database import Base, SessionLocal, engine, get_db_session  # noqa: E402
 from backend.app.main import app  # noqa: E402
 import backend.app.main as main_module  # noqa: E402
@@ -31,9 +32,40 @@ import backend.app.main as main_module  # noqa: E402
 class FakeRedis:
     def __init__(self) -> None:
         self.items: list[str] = []
+        self.counters: dict[str, int] = {}
+        self.values: dict[str, str] = {}
 
     def lpush(self, _queue_name: str, value: str) -> None:
         self.items.append(value)
+
+    def brpop(self, _queue_name: str, timeout: int = 0):
+        if not self.items:
+            return None
+        value = self.items.pop()
+        return (_queue_name, value)
+
+    def llen(self, _queue_name: str) -> int:
+        return len(self.items)
+
+    def incr(self, key: str) -> int:
+        current = self.counters.get(key, 0) + 1
+        self.counters[key] = current
+        self.values[key] = str(current)
+        return current
+
+    def expire(self, key: str, seconds: int) -> bool:
+        return True
+
+    def get(self, key: str) -> str | None:
+        return self.values.get(key)
+
+    def set(self, key: str, value: Any) -> None:
+        self.values[key] = str(value)
+
+
+@pytest.fixture
+def fake_redis() -> FakeRedis:
+    return FakeRedis()
 
 
 @pytest.fixture(autouse=True)
@@ -54,9 +86,7 @@ def db_session(reset_database) -> Generator:
 
 
 @pytest.fixture
-def client(monkeypatch: pytest.MonkeyPatch, reset_database) -> Generator[TestClient, None, None]:
-    fake_redis = FakeRedis()
-
+def client(monkeypatch: pytest.MonkeyPatch, reset_database, fake_redis: FakeRedis) -> Generator[TestClient, None, None]:
     def override_get_db() -> Generator:
         session = SessionLocal()
         try:
@@ -66,6 +96,7 @@ def client(monkeypatch: pytest.MonkeyPatch, reset_database) -> Generator[TestCli
 
     monkeypatch.setattr(events, "get_redis_client", lambda: fake_redis)
     monkeypatch.setattr(deliveries, "get_redis_client", lambda: fake_redis)
+    monkeypatch.setattr(system, "get_redis_client", lambda: fake_redis)
     monkeypatch.setattr(main_module, "init_db", lambda: None)
     app.dependency_overrides[get_db_session] = override_get_db
 
