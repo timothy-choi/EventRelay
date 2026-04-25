@@ -19,6 +19,8 @@ jobs:
       AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Detect GitHub runner IP
         id: runner_ip
         shell: bash
@@ -27,6 +29,22 @@ jobs:
           runner_ip="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')"
           echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
           echo "Runner public IP: ${runner_ip}"
+
+      - name: Compute deployment URLs
+        id: deploy_urls
+        shell: bash
+        run: |
+          set -euo pipefail
+          public_ip="${EC2_PUBLIC_IP:-$EC2_HOST}"
+          if [[ ! "$public_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "EC2_PUBLIC_IP must be set to the raw EC2 IPv4 address when EC2_HOST is not an IPv4 address."
+            exit 1
+          fi
+
+          ip_dashed="${public_ip//./-}"
+          echo "public_ip=${public_ip}" >> "$GITHUB_OUTPUT"
+          echo "api_base_url=https://api.eventrelay.${ip_dashed}.sslip.io" >> "$GITHUB_OUTPUT"
+          echo "frontend_base_url=https://eventrelay.${ip_dashed}.sslip.io" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         if: env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
@@ -105,8 +123,59 @@ jobs:
               exit 1
             }
             docker compose -f docker-compose.prod.yml ps
-            curl -f "${api_base_url}/health"
-            START_COMPOSE=false API_BASE_URL="${api_base_url}" FRONTEND_BASE_URL="${frontend_base_url}" ./scripts/full_app_smoke_test.sh
+
+      - name: Wait for public HTTPS
+        shell: bash
+        run: |
+          set -euo pipefail
+          api_base_url="${{ steps.deploy_urls.outputs.api_base_url }}"
+          frontend_base_url="${{ steps.deploy_urls.outputs.frontend_base_url }}"
+          deadline=$((SECONDS + 180))
+
+          until curl -fsS "${api_base_url}/health" >/dev/null; do
+            if (( SECONDS >= deadline )); then
+              echo "Timed out waiting for ${api_base_url}/health"
+              echo "Confirm the EC2 security group allows inbound 80 and 443 from the internet."
+              exit 1
+            fi
+            sleep 5
+          done
+
+          until curl -fsS "${frontend_base_url}" >/dev/null; do
+            if (( SECONDS >= deadline )); then
+              echo "Timed out waiting for ${frontend_base_url}"
+              echo "Confirm Caddy is running and ports 80/443 are open."
+              exit 1
+            fi
+            sleep 5
+          done
+
+      - name: Run public smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x scripts/full_app_smoke_test.sh
+          START_COMPOSE=false \
+          API_BASE_URL="${{ steps.deploy_urls.outputs.api_base_url }}" \
+          FRONTEND_BASE_URL="${{ steps.deploy_urls.outputs.frontend_base_url }}" \
+          RECEIVER_TARGET_BASE_URL="http://backend:8000" \
+          ./scripts/full_app_smoke_test.sh
+
+      - name: Dump remote logs on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 2m
+          command_timeout: 5m
+          script: |
+            cd ${{ secrets.APP_DIR }}
+            docker compose -f docker-compose.prod.yml ps || true
+            docker compose -f docker-compose.prod.yml logs caddy --tail=200 || true
+            docker compose -f docker-compose.prod.yml logs frontend --tail=200 || true
+            docker compose -f docker-compose.prod.yml logs backend --tail=200 || true
 
       - name: Revoke runner SSH from EC2 security group
         if: always() && env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''

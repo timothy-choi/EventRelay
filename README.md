@@ -308,6 +308,7 @@ Run it against a deployed instance:
 START_COMPOSE=false \
 API_BASE_URL=https://api.eventrelay.<ip-with-dashes>.sslip.io \
 FRONTEND_BASE_URL=https://eventrelay.<ip-with-dashes>.sslip.io \
+RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```
 

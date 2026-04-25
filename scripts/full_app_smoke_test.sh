@@ -10,6 +10,7 @@ SMOKE_EVENT_TYPE="${SMOKE_EVENT_TYPE:-ci.full_app.smoke}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-120}"
 POLL_INTERVAL_SECONDS="${POLL_INTERVAL_SECONDS:-2}"
 START_COMPOSE="${START_COMPOSE:-auto}"
+RECEIVER_TARGET_BASE_URL="${RECEIVER_TARGET_BASE_URL:-}"
 
 receiver_id=""
 endpoint_id=""
@@ -127,6 +128,9 @@ receiver_response="$(curl -fsS -X POST "$API_BASE_URL/test-webhooks" \
 echo "$receiver_response"
 receiver_id="$(printf '%s' "$receiver_response" | python_json_field '["id"]')"
 receiver_url="$(printf '%s' "$receiver_response" | python_json_field '["url"]')"
+if [[ -n "$RECEIVER_TARGET_BASE_URL" ]]; then
+  receiver_url="${RECEIVER_TARGET_BASE_URL%/}/test-webhooks/${receiver_id}"
+fi
 
 print_section "Creating endpoint pointing to built-in receiver"
 endpoint_response="$(curl -fsS -X POST "$API_BASE_URL/endpoints" \
