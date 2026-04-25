@@ -1,0 +1,7 @@
+EVENTRELAY_HOST {
+    reverse_proxy frontend:3000
+}
+
+API_HOST {
+    reverse_proxy backend:8000
+}

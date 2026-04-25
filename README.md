@@ -62,6 +62,19 @@ Health check:
 curl http://localhost:8000/health
 ```
 
+## Deployment
+
+EventRelay can run publicly on a single Ubuntu EC2 instance with Docker Compose and Caddy. The production Compose file keeps Postgres and Redis private on the Docker network, while Caddy is the only service exposed on ports `80` and `443`.
+
+For a free clean URL option, use sslip.io hostnames based on the EC2 public IP:
+
+- Frontend: `https://eventrelay.<ip-with-dashes>.sslip.io`
+- API: `https://api.eventrelay.<ip-with-dashes>.sslip.io`
+
+Caddy handles the HTTPS reverse proxy and automatic certificates once those domains resolve to the instance and the EC2 security group allows inbound `80` and `443`.
+
+See [docs/DEPLOY_EC2.md](docs/DEPLOY_EC2.md) for the full EC2 runbook.
+
 ## Demo
 
 ### 1. Create a built-in test receiver
@@ -286,6 +299,15 @@ It then verifies:
 Run the same check locally:
 
 ```bash
+./scripts/full_app_smoke_test.sh
+```
+
+Run it against a deployed instance:
+
+```bash
+START_COMPOSE=false \
+API_BASE_URL=https://api.eventrelay.<ip-with-dashes>.sslip.io \
+FRONTEND_BASE_URL=https://eventrelay.<ip-with-dashes>.sslip.io \
 ./scripts/full_app_smoke_test.sh
 ```
 

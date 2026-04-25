@@ -4,11 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-API_URL="${API_URL:-http://localhost:8000}"
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:3000}"
+API_BASE_URL="${API_BASE_URL:-${API_URL:-http://localhost:8000}}"
+FRONTEND_BASE_URL="${FRONTEND_BASE_URL:-${FRONTEND_URL:-http://localhost:3000}}"
 SMOKE_EVENT_TYPE="${SMOKE_EVENT_TYPE:-ci.full_app.smoke}"
 TIMEOUT_SECONDS="${TIMEOUT_SECONDS:-120}"
 POLL_INTERVAL_SECONDS="${POLL_INTERVAL_SECONDS:-2}"
+START_COMPOSE="${START_COMPOSE:-auto}"
 
 receiver_id=""
 endpoint_id=""
@@ -19,6 +20,10 @@ print_section() {
 }
 
 dump_logs() {
+  if [[ "${compose_started:-false}" != "true" ]]; then
+    return 0
+  fi
+
   print_section "docker compose ps"
   docker compose ps || true
 
@@ -29,8 +34,10 @@ dump_logs() {
 }
 
 cleanup() {
-  print_section "Cleaning up Docker Compose resources"
-  docker compose down -v || true
+  if [[ "$compose_started" == "true" ]]; then
+    print_section "Cleaning up Docker Compose resources"
+    docker compose down -v || true
+  fi
 }
 
 finalize() {
@@ -62,37 +69,59 @@ wait_for_http() {
   return 1
 }
 
+should_start_compose() {
+  if [[ "$START_COMPOSE" == "true" ]]; then
+    return 0
+  fi
+
+  if [[ "$START_COMPOSE" == "false" ]]; then
+    return 1
+  fi
+
+  [[ "$API_BASE_URL" == "http://localhost:8000" && "$FRONTEND_BASE_URL" == "http://localhost:3000" ]]
+}
+
 python_json_field() {
   local field="$1"
   python3 -c 'import json, sys; data = json.load(sys.stdin); value = data'"$field"'; print("" if value is None else value)'
 }
 
-print_section "Building and starting full app stack"
-docker compose up -d --build
+compose_started="false"
+if should_start_compose; then
+  print_section "Building and starting full app stack"
+  docker compose up -d --build
+  compose_started="true"
+else
+  print_section "Using existing deployed app"
+  echo "API_BASE_URL=$API_BASE_URL"
+  echo "FRONTEND_BASE_URL=$FRONTEND_BASE_URL"
+fi
 
 print_section "Waiting for backend and frontend"
-wait_for_http "backend health" "$API_URL/health"
-wait_for_http "frontend" "$FRONTEND_URL"
+wait_for_http "backend health" "$API_BASE_URL/health"
+wait_for_http "frontend" "$FRONTEND_BASE_URL"
 
 print_section "Verifying frontend returns HTTP 200"
-frontend_status="$(curl -s -o /dev/null -w '%{http_code}' "$FRONTEND_URL")"
+frontend_status="$(curl -s -o /dev/null -w '%{http_code}' "$FRONTEND_BASE_URL")"
 if [[ "$frontend_status" != "200" ]]; then
   echo "Frontend returned unexpected status: $frontend_status" >&2
   exit 1
 fi
 
-print_section "Verifying containers are running"
-docker compose ps
+if [[ "$compose_started" == "true" ]]; then
+  print_section "Verifying containers are running"
+  docker compose ps
 
-for service in postgres redis proxy backend worker frontend; do
-  if ! docker compose ps --services --status running | grep -qx "$service"; then
-    echo "Expected service '$service' to be running" >&2
-    exit 1
-  fi
-done
+  for service in postgres redis proxy backend worker frontend; do
+    if ! docker compose ps --services --status running | grep -qx "$service"; then
+      echo "Expected service '$service' to be running" >&2
+      exit 1
+    fi
+  done
+fi
 
 print_section "Creating built-in test webhook receiver"
-receiver_response="$(curl -fsS -X POST "$API_URL/test-webhooks" \
+receiver_response="$(curl -fsS -X POST "$API_BASE_URL/test-webhooks" \
   -H "Content-Type: application/json" \
   -d '{"name":"ci-smoke-receiver"}')"
 echo "$receiver_response"
@@ -100,7 +129,7 @@ receiver_id="$(printf '%s' "$receiver_response" | python_json_field '["id"]')"
 receiver_url="$(printf '%s' "$receiver_response" | python_json_field '["url"]')"
 
 print_section "Creating endpoint pointing to built-in receiver"
-endpoint_response="$(curl -fsS -X POST "$API_URL/endpoints" \
+endpoint_response="$(curl -fsS -X POST "$API_BASE_URL/endpoints" \
   -H "Content-Type: application/json" \
   -d "$(python3 - "$receiver_url" <<'PY'
 import json
@@ -117,7 +146,7 @@ echo "$endpoint_response"
 endpoint_id="$(printf '%s' "$endpoint_response" | python_json_field '["id"]')"
 
 print_section "Sending smoke event"
-event_response="$(curl -fsS -X POST "$API_URL/events" \
+event_response="$(curl -fsS -X POST "$API_BASE_URL/events" \
   -H "Content-Type: application/json" \
   -d "$(python3 - "$SMOKE_EVENT_TYPE" <<'PY'
 import json
@@ -139,7 +168,7 @@ event_id="$(printf '%s' "$event_response" | python_json_field '["id"]')"
 print_section "Polling deliveries until one succeeds"
 delivery_deadline=$((SECONDS + TIMEOUT_SECONDS))
 while (( SECONDS < delivery_deadline )); do
-  delivery_result="$(python3 - "$API_URL" "$endpoint_id" "$event_id" <<'PY'
+  delivery_result="$(python3 - "$API_BASE_URL" "$endpoint_id" "$event_id" <<'PY'
 import json
 import sys
 import urllib.request
@@ -186,7 +215,7 @@ print_section "Verifying built-in receiver captured the request"
 receiver_deadline=$((SECONDS + TIMEOUT_SECONDS))
 captured_request_count=0
 while (( SECONDS < receiver_deadline )); do
-  captured_request_count="$(python3 - "$API_URL" "$receiver_id" "$event_id" <<'PY'
+  captured_request_count="$(python3 - "$API_BASE_URL" "$receiver_id" "$event_id" <<'PY'
 import json
 import sys
 import urllib.request
