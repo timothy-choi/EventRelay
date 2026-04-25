@@ -4,18 +4,62 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
+      EC2_SSH_SECURITY_GROUP_ID: ${{ secrets.EC2_SSH_SECURITY_GROUP_ID }}
+      AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      AWS_ROLE_TO_ASSUME: ${{ secrets.AWS_ROLE_TO_ASSUME }}
 
     steps:
+      - name: Detect GitHub runner IP
+        id: runner_ip
+        shell: bash
+        run: |
+          set -euo pipefail
+          runner_ip="$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')"
+          echo "cidr=${runner_ip}/32" >> "$GITHUB_OUTPUT"
+          echo "Runner public IP: ${runner_ip}"
+
+      - name: Configure AWS credentials
+        if: env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Allow runner SSH in EC2 security group
+        if: env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws ec2 authorize-security-group-ingress \
+            --group-id "$EC2_SSH_SECURITY_GROUP_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "${{ steps.runner_ip.outputs.cidr }}" || true
+
       - name: Check SSH reachability
         shell: bash
         run: |
           set -euo pipefail
-          timeout 15 bash -c '</dev/tcp/${{ secrets.EC2_HOST }}/22' || {
-            echo "Could not reach ${{ secrets.EC2_HOST }} on port 22 from the GitHub runner."
-            echo "Check that EC2_HOST is the current public IPv4/DNS name, the instance is running, and the security group/NACL allows inbound TCP 22."
+          if [ -z "$EC2_HOST" ]; then
+            echo "EC2_HOST secret is empty. Set it to the EC2 public IPv4 address or public DNS name."
+            exit 1
+          fi
+
+          timeout 30 bash -c "</dev/tcp/${EC2_HOST}/22" || {
+            echo "Could not reach EC2_HOST on port 22 from this GitHub runner."
+            echo "Runner CIDR: ${{ steps.runner_ip.outputs.cidr }}"
+            echo "Set EC2_SSH_SECURITY_GROUP_ID + AWS_ROLE_TO_ASSUME + AWS_REGION to let this workflow open SSH automatically, or allow this CIDR on the EC2 security group."
+            echo "Also confirm the instance is running, EC2_HOST is the current public IP/DNS, and the subnet route/NACL allows SSH."
             exit 1
           }
 
@@ -34,9 +78,9 @@ jobs:
             git reset --hard origin/main
             chmod +x scripts/render_caddyfile.sh scripts/full_app_smoke_test.sh
 
-            export EC2_PUBLIC_IP="${{ secrets.EC2_PUBLIC_IP }}"
+            export EC2_PUBLIC_IP="${{ env.EC2_PUBLIC_IP }}"
             if [ -z "$EC2_PUBLIC_IP" ]; then
-              export EC2_PUBLIC_IP="${{ secrets.EC2_HOST }}"
+              export EC2_PUBLIC_IP="${{ env.EC2_HOST }}"
             fi
 
             ip_dashed="${EC2_PUBLIC_IP//./-}"
@@ -58,3 +102,14 @@ jobs:
             docker compose -f docker-compose.prod.yml ps
             curl -f "${api_base_url}/health"
             START_COMPOSE=false API_BASE_URL="${api_base_url}" FRONTEND_BASE_URL="${frontend_base_url}" ./scripts/full_app_smoke_test.sh
+
+      - name: Revoke runner SSH from EC2 security group
+        if: always() && env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          aws ec2 revoke-security-group-ingress \
+            --group-id "$EC2_SSH_SECURITY_GROUP_ID" \
+            --protocol tcp \
+            --port 22 \
+            --cidr "${{ steps.runner_ip.outputs.cidr }}" || true
