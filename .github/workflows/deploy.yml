@@ -9,19 +9,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check SSH reachability
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 15 bash -c '</dev/tcp/${{ secrets.EC2_HOST }}/22' || {
+            echo "Could not reach ${{ secrets.EC2_HOST }} on port 22 from the GitHub runner."
+            echo "Check that EC2_HOST is the current public IPv4/DNS name, the instance is running, and the security group/NACL allows inbound TCP 22."
+            exit 1
+          }
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 2m
+          command_timeout: 20m
           script: |
-            set -e
+            set -euo pipefail
             cd ${{ secrets.APP_DIR }}
             git fetch origin main
             git reset --hard origin/main
-            docker compose up -d --build
-            docker compose ps
-            curl -f http://localhost:8000/health
-            chmod +x scripts/full_app_smoke_test.sh
-            ./scripts/full_app_smoke_test.sh
+            chmod +x scripts/render_caddyfile.sh scripts/full_app_smoke_test.sh
+
+            export EC2_PUBLIC_IP="${{ secrets.EC2_PUBLIC_IP }}"
+            if [ -z "$EC2_PUBLIC_IP" ]; then
+              export EC2_PUBLIC_IP="${{ secrets.EC2_HOST }}"
+            fi
+
+            ip_dashed="${EC2_PUBLIC_IP//./-}"
+            api_base_url="https://api.eventrelay.${ip_dashed}.sslip.io"
+            frontend_base_url="https://eventrelay.${ip_dashed}.sslip.io"
+
+            ./scripts/render_caddyfile.sh
+
+            cat > .env <<EOF
+            DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/eventrelay
+            REDIS_URL=redis://redis:6379/0
+            USE_NETWORK_PROXY=true
+            NETWORK_PROXY_URL=http://proxy:8080/proxy
+            PUBLIC_BASE_URL=${api_base_url}
+            NEXT_PUBLIC_API_URL=${api_base_url}
+            EOF
+
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml ps
+            curl -f "${api_base_url}/health"
+            START_COMPOSE=false API_BASE_URL="${api_base_url}" FRONTEND_BASE_URL="${frontend_base_url}" ./scripts/full_app_smoke_test.sh
