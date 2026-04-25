@@ -98,7 +98,12 @@ jobs:
             NEXT_PUBLIC_API_URL=${api_base_url}
             EOF
 
-            docker compose -f docker-compose.prod.yml up -d --build
+            docker compose -f docker-compose.prod.yml up -d --build || {
+              docker compose -f docker-compose.prod.yml ps
+              docker compose -f docker-compose.prod.yml logs frontend --tail=200
+              docker compose -f docker-compose.prod.yml logs caddy --tail=200
+              exit 1
+            }
             docker compose -f docker-compose.prod.yml ps
             curl -f "${api_base_url}/health"
             START_COMPOSE=false API_BASE_URL="${api_base_url}" FRONTEND_BASE_URL="${frontend_base_url}" ./scripts/full_app_smoke_test.sh
