@@ -1,11 +1,20 @@
 EVENTRELAY_HOST {
-    @api path /api /api/*
-    handle @api {
+    encode gzip zstd
+
+    handle /api/* {
         uri strip_prefix /api
-        reverse_proxy localhost:8000
+        reverse_proxy backend:8000
+    }
+
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    handle /ready {
+        reverse_proxy backend:8000
     }
 
     handle {
-        reverse_proxy localhost:3000
+        reverse_proxy frontend:3000
     }
 }
