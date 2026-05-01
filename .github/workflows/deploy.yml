@@ -109,6 +109,9 @@ jobs:
               docker compose -f docker-compose.prod.yml logs caddy --tail=200
               exit 1
             }
+            docker compose -f docker-compose.prod.yml up -d --force-recreate caddy
+            docker compose -f docker-compose.prod.yml exec -T caddy cat /etc/caddy/Caddyfile
+            docker compose -f docker-compose.prod.yml logs caddy --tail=100
             docker compose -f docker-compose.prod.yml ps
 
       - name: Wait for public HTTPS
