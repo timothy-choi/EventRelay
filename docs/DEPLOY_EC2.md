@@ -2,7 +2,7 @@
 
 This guide deploys EventRelay on a single Ubuntu EC2 instance with Docker Compose, Caddy, and a public DNS hostname:
 
-- Frontend and API: `https://eventrelay.ddnsfree.com`
+- Frontend and API: `https://eventrelay.freeddns.org`
 
 Caddy can issue automatic HTTPS certificates only after this hostname resolves to the EC2 public IP and inbound ports `80` and `443` are open.
 
@@ -67,7 +67,7 @@ Render the Caddyfile for the public hostname:
 ./scripts/render_caddyfile.sh
 ```
 
-The script defaults to `eventrelay.ddnsfree.com` and writes `Caddyfile` from `Caddyfile.template`.
+The script defaults to `eventrelay.freeddns.org` and writes `Caddyfile` from `Caddyfile.template`.
 
 ## 6. Create `.env`
 
@@ -84,8 +84,8 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/eventrelay
 REDIS_URL=redis://redis:6379/0
 USE_NETWORK_PROXY=true
 NETWORK_PROXY_URL=http://proxy:8080/proxy
-PUBLIC_BASE_URL=https://eventrelay.ddnsfree.com
-NEXT_PUBLIC_API_BASE_URL=https://eventrelay.ddnsfree.com
+PUBLIC_BASE_URL=https://eventrelay.freeddns.org
+NEXT_PUBLIC_API_BASE_URL=https://eventrelay.freeddns.org
 ```
 
 `PUBLIC_BASE_URL` controls built-in receiver URLs returned by the API. `NEXT_PUBLIC_API_BASE_URL` controls frontend API requests.
@@ -103,12 +103,12 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs caddy --tail=100
 ```
 
-If Caddy cannot get certificates, confirm that `eventrelay.ddnsfree.com` resolves to the EC2 public IP and the security group allows inbound `80` and `443`.
+If Caddy cannot get certificates, confirm that `eventrelay.freeddns.org` resolves to the EC2 public IP and the security group allows inbound `80` and `443`.
 
 ## 8. Verify Backend Health
 
 ```bash
-curl -fsS https://eventrelay.ddnsfree.com/health
+curl -fsS https://eventrelay.freeddns.org/health
 ```
 
 Expected response:
@@ -122,21 +122,21 @@ Expected response:
 Open:
 
 ```text
-https://eventrelay.ddnsfree.com
+https://eventrelay.freeddns.org
 ```
 
 Or check from the terminal:
 
 ```bash
-curl -I https://eventrelay.ddnsfree.com
+curl -I https://eventrelay.freeddns.org
 ```
 
 ## 10. Run Smoke Test Against EC2
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://eventrelay.ddnsfree.com \
-FRONTEND_BASE_URL=https://eventrelay.ddnsfree.com \
+API_BASE_URL=https://eventrelay.freeddns.org \
+FRONTEND_BASE_URL=https://eventrelay.freeddns.org \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```

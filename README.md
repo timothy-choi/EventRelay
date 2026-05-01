@@ -68,7 +68,7 @@ EventRelay can run publicly on a single Ubuntu EC2 instance with Docker Compose 
 
 The public deployment uses a single HTTPS domain:
 
-- Frontend and API: `https://eventrelay.ddnsfree.com`
+- Frontend and API: `https://eventrelay.freeddns.org`
 
 Caddy handles the HTTPS reverse proxy and automatic certificates once the domain resolves to the instance and the EC2 security group allows inbound `80` and `443`.
 
@@ -307,8 +307,8 @@ Run it against a deployed instance:
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://eventrelay.ddnsfree.com \
-FRONTEND_BASE_URL=https://eventrelay.ddnsfree.com \
+API_BASE_URL=https://eventrelay.freeddns.org \
+FRONTEND_BASE_URL=https://eventrelay.freeddns.org \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```

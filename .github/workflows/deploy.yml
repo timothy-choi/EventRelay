@@ -35,8 +35,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "api_base_url=https://eventrelay.ddnsfree.com" >> "$GITHUB_OUTPUT"
-          echo "frontend_base_url=https://eventrelay.ddnsfree.com" >> "$GITHUB_OUTPUT"
+          echo "api_base_url=https://eventrelay.freeddns.org" >> "$GITHUB_OUTPUT"
+          echo "frontend_base_url=https://eventrelay.freeddns.org" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         if: env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
@@ -88,9 +88,9 @@ jobs:
             git reset --hard origin/main
             chmod +x scripts/render_caddyfile.sh scripts/full_app_smoke_test.sh
 
-            export EVENTRELAY_HOST="eventrelay.ddnsfree.com"
-            api_base_url="https://eventrelay.ddnsfree.com"
-            frontend_base_url="https://eventrelay.ddnsfree.com"
+            export EVENTRELAY_HOST="eventrelay.freeddns.org"
+            api_base_url="https://eventrelay.freeddns.org"
+            frontend_base_url="https://eventrelay.freeddns.org"
 
             ./scripts/render_caddyfile.sh
 
