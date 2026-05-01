@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -10,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.app.db.database import get_db_session
+from backend.app.config import settings
 from backend.app.models.test_webhook_receiver import TestWebhookReceiver
 from backend.app.models.test_webhook_request import TestWebhookRequest
 from backend.app.schemas.test_webhook import (
@@ -23,11 +23,10 @@ router = APIRouter(prefix="/test-webhooks", tags=["test-webhooks"])
 
 MAX_HEADER_VALUE_LENGTH = 2048
 MAX_RAW_BODY_LENGTH = 10000
-PUBLIC_API_URL = os.getenv("PUBLIC_API_URL", "http://localhost:8000")
 
 
 def build_receiver_url(receiver_id: UUID) -> str:
-    return f"{PUBLIC_API_URL.rstrip('/')}/test-webhooks/{receiver_id}"
+    return f"{settings.PUBLIC_BASE_URL.rstrip('/')}/test-webhooks/{receiver_id}"
 
 
 def serialize_receiver(receiver: TestWebhookReceiver) -> TestWebhookReceiverRead:

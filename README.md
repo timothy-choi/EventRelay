@@ -66,12 +66,11 @@ curl http://localhost:8000/health
 
 EventRelay can run publicly on a single Ubuntu EC2 instance with Docker Compose and Caddy. The production Compose file keeps Postgres and Redis private on the Docker network, while Caddy is the only service exposed on ports `80` and `443`.
 
-For a free clean URL option, use sslip.io hostnames based on the EC2 public IP:
+The public deployment uses a single HTTPS domain:
 
-- Frontend: `https://eventrelay.<ip-with-dashes>.sslip.io`
-- API: `https://api.eventrelay.<ip-with-dashes>.sslip.io`
+- Frontend and API: `https://eventrelay.freeddns.org`
 
-Caddy handles the HTTPS reverse proxy and automatic certificates once those domains resolve to the instance and the EC2 security group allows inbound `80` and `443`.
+Caddy handles the HTTPS reverse proxy and automatic certificates once the domain resolves to the instance and the EC2 security group allows inbound `80` and `443`.
 
 See [docs/DEPLOY_EC2.md](docs/DEPLOY_EC2.md) for the full EC2 runbook.
 
@@ -80,7 +79,9 @@ See [docs/DEPLOY_EC2.md](docs/DEPLOY_EC2.md) for the full EC2 runbook.
 ### 1. Create a built-in test receiver
 
 ```bash
-curl -X POST http://localhost:8000/test-webhooks \
+API_BASE_URL="${API_BASE_URL:-http://localhost:8000}"
+
+curl -X POST "$API_BASE_URL/test-webhooks" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "stable-receiver"
@@ -98,7 +99,7 @@ Use that URL as an endpoint target inside Docker.
 ### 2. Create a stable endpoint
 
 ```bash
-curl -X POST http://localhost:8000/endpoints \
+curl -X POST "$API_BASE_URL/endpoints" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "stable-endpoint",
@@ -109,7 +110,7 @@ curl -X POST http://localhost:8000/endpoints \
 ### 3. Create an unstable endpoint
 
 ```bash
-curl -X POST http://localhost:8000/endpoints \
+curl -X POST "$API_BASE_URL/endpoints" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "unstable-endpoint",
@@ -123,7 +124,7 @@ curl -X POST http://localhost:8000/endpoints \
 ### 4. Send an event
 
 ```bash
-curl -X POST http://localhost:8000/events \
+curl -X POST "$API_BASE_URL/events" \
   -H "Content-Type: application/json" \
   -d '{
     "event_type": "demo.network.test",
@@ -136,19 +137,19 @@ curl -X POST http://localhost:8000/events \
 ### 5. Inspect deliveries
 
 ```bash
-curl http://localhost:8000/deliveries
+curl "$API_BASE_URL/deliveries"
 ```
 
 ### 6. Inspect system-wide metrics
 
 ```bash
-curl http://localhost:8000/system/stats
+curl "$API_BASE_URL/system/stats"
 ```
 
 ### 7. Inspect built-in receiver traffic
 
 ```bash
-curl http://localhost:8000/test-webhooks/<receiver_id>/requests
+curl "$API_BASE_URL/test-webhooks/<receiver_id>/requests"
 ```
 
 ## API Highlights
@@ -196,7 +197,7 @@ Per-endpoint simulation fields:
 Example:
 
 ```bash
-curl -X PATCH http://localhost:8000/endpoints/<endpoint_id> \
+curl -X PATCH "$API_BASE_URL/endpoints/<endpoint_id>" \
   -H "Content-Type: application/json" \
   -d '{
     "simulation_latency_ms": 300,
@@ -240,7 +241,7 @@ What to watch under load:
 ### Endpoint stats
 
 ```bash
-curl http://localhost:8000/endpoints/<endpoint_id>/stats
+curl "$API_BASE_URL/endpoints/<endpoint_id>/stats"
 ```
 
 Returns delivery totals, success rate, latency summaries, and failure counts per endpoint.
@@ -248,7 +249,7 @@ Returns delivery totals, success rate, latency summaries, and failure counts per
 ### System stats
 
 ```bash
-curl http://localhost:8000/system/stats
+curl "$API_BASE_URL/system/stats"
 ```
 
 Returns:
@@ -306,8 +307,8 @@ Run it against a deployed instance:
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://api.eventrelay.<ip-with-dashes>.sslip.io \
-FRONTEND_BASE_URL=https://eventrelay.<ip-with-dashes>.sslip.io \
+API_BASE_URL=https://eventrelay.freeddns.org \
+FRONTEND_BASE_URL=https://eventrelay.freeddns.org \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```
