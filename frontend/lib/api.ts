@@ -7,9 +7,10 @@ import {
   TestWebhookRequest,
 } from "./types";
 
-function getBaseApiUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-}
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
+
+export default API_BASE_URL;
 
 async function parseResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -20,7 +21,7 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${getBaseApiUrl()}${path}`, {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
@@ -32,7 +33,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export function getApiUrl(): string {
-  return getBaseApiUrl();
+  return API_BASE_URL;
 }
 
 export async function getEndpoints(): Promise<Endpoint[]> {

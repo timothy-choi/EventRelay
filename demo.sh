@@ -1,5 +1,7 @@
 # 1. Create normal endpoint
-curl -X POST http://localhost:8000/endpoints \
+API_BASE_URL="${API_BASE_URL:-http://localhost:8000}"
+
+curl -X POST "$API_BASE_URL/endpoints" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "normal-endpoint",
@@ -10,7 +12,7 @@ curl -X POST http://localhost:8000/endpoints \
   }'
 
 # 2. Create simulated unstable endpoint
-curl -X POST http://localhost:8000/endpoints \
+curl -X POST "$API_BASE_URL/endpoints" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "unstable-network-endpoint",
@@ -22,7 +24,7 @@ curl -X POST http://localhost:8000/endpoints \
 
 # 3. Send test events
 for i in {1..10}; do
-  curl -X POST http://localhost:8000/events \
+  curl -X POST "$API_BASE_URL/events" \
     -H "Content-Type: application/json" \
     -d "{\"event_type\":\"demo.network.test\",\"payload\":{\"i\":$i}}"
 done

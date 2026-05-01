@@ -1,11 +1,10 @@
 # Deploy EventRelay on One EC2 Instance
 
-This guide deploys EventRelay on a single Ubuntu EC2 instance with Docker Compose, Caddy, and free sslip.io hostnames:
+This guide deploys EventRelay on a single Ubuntu EC2 instance with Docker Compose, Caddy, and a public DNS hostname:
 
-- Frontend: `https://eventrelay.<EC2-IP-WITH-DASHES>.sslip.io`
-- API: `https://api.eventrelay.<EC2-IP-WITH-DASHES>.sslip.io`
+- Frontend and API: `https://eventrelay.ddnsfree.com`
 
-Caddy can issue automatic HTTPS certificates only after these hostnames resolve to the EC2 public IP and inbound ports `80` and `443` are open.
+Caddy can issue automatic HTTPS certificates only after this hostname resolves to the EC2 public IP and inbound ports `80` and `443` are open.
 
 ## 1. Launch Ubuntu EC2
 
@@ -62,19 +61,13 @@ cd EventRelay
 
 ## 5. Generate the Caddyfile
 
-Set the EC2 public IP and render the sslip.io hostnames:
+Render the Caddyfile for the public hostname:
 
 ```bash
-export EC2_PUBLIC_IP=1.2.3.4
 ./scripts/render_caddyfile.sh
 ```
 
-For `1.2.3.4`, the script generates:
-
-- `https://eventrelay.1-2-3-4.sslip.io`
-- `https://api.eventrelay.1-2-3-4.sslip.io`
-
-It writes `Caddyfile` from `Caddyfile.template`.
+The script defaults to `eventrelay.ddnsfree.com` and writes `Caddyfile` from `Caddyfile.template`.
 
 ## 6. Create `.env`
 
@@ -84,18 +77,18 @@ Copy the example:
 cp .env.example .env
 ```
 
-Edit `.env` and replace `<ip-dashed>` with the dashed EC2 IP:
+Edit `.env`:
 
 ```bash
 DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/eventrelay
 REDIS_URL=redis://redis:6379/0
 USE_NETWORK_PROXY=true
 NETWORK_PROXY_URL=http://proxy:8080/proxy
-PUBLIC_BASE_URL=https://api.eventrelay.1-2-3-4.sslip.io
-NEXT_PUBLIC_API_URL=https://api.eventrelay.1-2-3-4.sslip.io
+PUBLIC_BASE_URL=https://eventrelay.ddnsfree.com
+NEXT_PUBLIC_API_BASE_URL=https://eventrelay.ddnsfree.com
 ```
 
-`PUBLIC_BASE_URL` controls built-in receiver URLs returned by the API. `NEXT_PUBLIC_API_URL` controls the frontend server routes that proxy dashboard requests to the API.
+`PUBLIC_BASE_URL` controls built-in receiver URLs returned by the API. `NEXT_PUBLIC_API_BASE_URL` controls frontend API requests.
 
 ## 7. Start Production Compose
 
@@ -110,12 +103,12 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs caddy --tail=100
 ```
 
-If Caddy cannot get certificates, confirm that the sslip.io domains resolve to the EC2 public IP and the security group allows inbound `80` and `443`.
+If Caddy cannot get certificates, confirm that `eventrelay.ddnsfree.com` resolves to the EC2 public IP and the security group allows inbound `80` and `443`.
 
 ## 8. Verify Backend Health
 
 ```bash
-curl -fsS https://api.eventrelay.1-2-3-4.sslip.io/health
+curl -fsS https://eventrelay.ddnsfree.com/health
 ```
 
 Expected response:
@@ -129,21 +122,21 @@ Expected response:
 Open:
 
 ```text
-https://eventrelay.1-2-3-4.sslip.io
+https://eventrelay.ddnsfree.com
 ```
 
 Or check from the terminal:
 
 ```bash
-curl -I https://eventrelay.1-2-3-4.sslip.io
+curl -I https://eventrelay.ddnsfree.com
 ```
 
 ## 10. Run Smoke Test Against EC2
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://api.eventrelay.1-2-3-4.sslip.io \
-FRONTEND_BASE_URL=https://eventrelay.1-2-3-4.sslip.io \
+API_BASE_URL=https://eventrelay.ddnsfree.com \
+FRONTEND_BASE_URL=https://eventrelay.ddnsfree.com \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```
