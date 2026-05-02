@@ -1,0 +1,16 @@
+eventrelay.44-222-242-148.sslip.io {
+    encode gzip zstd
+
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy backend:8000
+    }
+
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    handle /ready {
+        reverse_proxy backend:8000
+    }
+}
