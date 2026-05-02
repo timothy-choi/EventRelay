@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TEMPLATE_FILE="$ROOT_DIR/Caddyfile.template"
 OUTPUT_FILE="$ROOT_DIR/Caddyfile"
 
-EVENTRELAY_HOST="${EVENTRELAY_HOST:-eventrelay.freeddns.org}"
+EVENTRELAY_HOST="${EVENTRELAY_HOST:-eventrelay.44-222-242-148.sslip.io}"
 
 if [[ ! -f "$TEMPLATE_FILE" ]]; then
   echo "Missing template: $TEMPLATE_FILE" >&2

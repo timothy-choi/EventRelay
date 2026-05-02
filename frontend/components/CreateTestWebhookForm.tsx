@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { apiUrl } from "../lib/api";
 import { notifyDataChanged } from "../lib/refresh";
 
 export function CreateTestWebhookForm() {
@@ -16,7 +17,7 @@ export function CreateTestWebhookForm() {
     setError(null);
 
     try {
-      const response = await fetch("/api/test-webhooks", {
+      const response = await fetch(apiUrl("/test-webhooks"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

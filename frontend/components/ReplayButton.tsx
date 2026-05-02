@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { apiUrl } from "../lib/api";
 import { notifyDataChanged } from "../lib/refresh";
 
 export function ReplayButton({ deliveryId }: { deliveryId: string }) {
@@ -14,7 +15,7 @@ export function ReplayButton({ deliveryId }: { deliveryId: string }) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/deliveries/${deliveryId}/replay`, {
+      const response = await fetch(apiUrl(`/deliveries/${deliveryId}/replay`), {
         method: "POST",
       });
       if (!response.ok) {

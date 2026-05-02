@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { apiUrl } from "../lib/api";
 import { notifyDataChanged } from "../lib/refresh";
 
 export function DeactivateButton({
@@ -23,8 +24,12 @@ export function DeactivateButton({
     setError(null);
 
     try {
-      const response = await fetch(`/api/endpoints/${endpointId}/deactivate`, {
-        method: "POST",
+      const response = await fetch(apiUrl(`/endpoints/${endpointId}`), {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ is_active: false }),
       });
       if (!response.ok) {
         throw new Error(await response.text());

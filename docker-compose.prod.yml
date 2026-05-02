@@ -39,6 +39,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://postgres:postgres@postgres:5432/eventrelay}
       REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://backend:8000}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000,https://eventrelay.vercel.app}
+      CORS_ALLOW_ORIGIN_REGEX: ${CORS_ALLOW_ORIGIN_REGEX:-https://.*\.vercel\.app}
       USE_NETWORK_PROXY: ${USE_NETWORK_PROXY:-true}
       NETWORK_PROXY_URL: ${NETWORK_PROXY_URL:-http://proxy:8080/proxy}
     healthcheck:

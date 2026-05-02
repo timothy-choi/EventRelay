@@ -66,13 +66,54 @@ curl http://localhost:8000/health
 
 EventRelay can run publicly on a single Ubuntu EC2 instance with Docker Compose and Caddy. The production Compose file keeps Postgres and Redis private on the Docker network, while Caddy is the only service exposed on ports `80` and `443`.
 
-The public deployment uses a single HTTPS domain:
+The EC2 deployment exposes the backend through Caddy:
 
-- Frontend and API: `https://eventrelay.freeddns.org`
+- Backend API: `https://eventrelay.44-222-242-148.sslip.io/api`
 
-Caddy handles the HTTPS reverse proxy and automatic certificates once the domain resolves to the instance and the EC2 security group allows inbound `80` and `443`.
+Caddy handles the HTTPS reverse proxy and automatic certificates once the sslip.io hostname resolves to the instance and the EC2 security group allows inbound `80` and `443`.
 
 See [docs/DEPLOY_EC2.md](docs/DEPLOY_EC2.md) for the full EC2 runbook.
+
+### Vercel Frontend
+
+The Next.js frontend can be deployed separately on Vercel while the API, worker, Postgres, Redis, and proxy continue running on EC2.
+
+In Vercel:
+
+- Import the GitHub repo.
+- Set Root Directory to `frontend`.
+- Use Framework Preset `Next.js`.
+- Add environment variable `NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api`.
+
+The EC2/Caddy deployment must keep this route so the Vercel app can reach the backend:
+
+```caddyfile
+handle /api/* {
+    uri strip_prefix /api
+    reverse_proxy backend:8000
+}
+```
+
+Frontend verification:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+After deploying to Vercel:
+
+```bash
+curl -I https://YOUR-VERCEL-APP.vercel.app
+curl -I https://eventrelay.44-222-242-148.sslip.io/api/health
+```
+
+Check for accidental frontend hardcoded API URLs:
+
+```bash
+grep -R "localhost:8000\|eventrelay.freeddns.org\|44-222-242-148.sslip.io" -n frontend || true
+```
 
 ## Demo
 
@@ -307,8 +348,8 @@ Run it against a deployed instance:
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://eventrelay.freeddns.org \
-FRONTEND_BASE_URL=https://eventrelay.freeddns.org \
+API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api \
+FRONTEND_BASE_URL=https://eventrelay.44-222-242-148.sslip.io \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```

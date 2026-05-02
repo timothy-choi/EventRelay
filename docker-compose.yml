@@ -45,6 +45,8 @@ services:
       DATABASE_URL: postgresql+psycopg://hookhub:hookhub@postgres:5432/hookhub
       REDIS_URL: redis://redis:6379/0
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://backend:8000}
+      CORS_ALLOW_ORIGINS: ${CORS_ALLOW_ORIGINS:-http://localhost:3000,https://eventrelay.vercel.app}
+      CORS_ALLOW_ORIGIN_REGEX: ${CORS_ALLOW_ORIGIN_REGEX:-https://.*\.vercel\.app}
       USE_NETWORK_PROXY: "false"
     ports:
       - "8000:8000"

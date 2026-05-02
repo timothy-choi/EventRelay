@@ -35,8 +35,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "api_base_url=https://eventrelay.freeddns.org" >> "$GITHUB_OUTPUT"
-          echo "frontend_base_url=https://eventrelay.freeddns.org" >> "$GITHUB_OUTPUT"
+          echo "api_base_url=https://eventrelay.44-222-242-148.sslip.io/api" >> "$GITHUB_OUTPUT"
+          echo "frontend_base_url=https://eventrelay.44-222-242-148.sslip.io" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         if: env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
@@ -88,9 +88,9 @@ jobs:
             git reset --hard origin/main
             chmod +x scripts/render_caddyfile.sh scripts/full_app_smoke_test.sh
 
-            export EVENTRELAY_HOST="eventrelay.freeddns.org"
-            api_base_url="https://eventrelay.freeddns.org"
-            frontend_base_url="https://eventrelay.freeddns.org"
+            export EVENTRELAY_HOST="eventrelay.44-222-242-148.sslip.io"
+            api_base_url="https://eventrelay.44-222-242-148.sslip.io/api"
+            frontend_base_url="https://eventrelay.44-222-242-148.sslip.io"
 
             ./scripts/render_caddyfile.sh
 
@@ -101,6 +101,8 @@ jobs:
             NETWORK_PROXY_URL=http://proxy:8080/proxy
             PUBLIC_BASE_URL=${api_base_url}
             NEXT_PUBLIC_API_BASE_URL=${api_base_url}
+            CORS_ALLOW_ORIGINS=http://localhost:3000,https://eventrelay.vercel.app
+            CORS_ALLOW_ORIGIN_REGEX=https://.*\.vercel\.app
             EOF
 
             docker compose -f docker-compose.prod.yml up -d --build || {

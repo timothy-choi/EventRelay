@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardCharts from "../components/DashboardCharts";
+import { apiUrl } from "../lib/api";
 import { DATA_CHANGED_EVENT } from "../lib/refresh";
 import { DeliveryListItem, Endpoint, EndpointStats, SystemStats } from "../lib/types";
 
@@ -16,9 +17,9 @@ type DashboardData = {
 
 async function fetchDashboardData(): Promise<DashboardData> {
   const [endpointsResponse, deliveriesResponse, systemStatsResponse] = await Promise.all([
-    fetch("/api/endpoints", { cache: "no-store" }),
-    fetch("/api/deliveries", { cache: "no-store" }),
-    fetch("/api/system/stats", { cache: "no-store" }),
+    fetch(apiUrl("/endpoints"), { cache: "no-store" }),
+    fetch(apiUrl("/deliveries"), { cache: "no-store" }),
+    fetch(apiUrl("/system/stats"), { cache: "no-store" }),
   ]);
 
   if (!endpointsResponse.ok) {
@@ -38,7 +39,7 @@ async function fetchDashboardData(): Promise<DashboardData> {
   const systemStats = (await systemStatsResponse.json()) as SystemStats;
   const endpointStatsResponses = await Promise.all(
     endpoints.map(async (endpoint) => {
-      const response = await fetch(`/api/endpoints/${endpoint.id}/stats`, { cache: "no-store" });
+      const response = await fetch(apiUrl(`/endpoints/${endpoint.id}/stats`), { cache: "no-store" });
       if (!response.ok) {
         throw new Error(await response.text());
       }

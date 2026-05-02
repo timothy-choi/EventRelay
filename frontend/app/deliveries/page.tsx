@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { apiUrl } from "../../lib/api";
 import { DeliveryListItem } from "../../lib/types";
 import { DATA_CHANGED_EVENT } from "../../lib/refresh";
 
 async function fetchDeliveries(): Promise<DeliveryListItem[]> {
-  const response = await fetch("/api/deliveries", {
+  const response = await fetch(apiUrl("/deliveries"), {
     cache: "no-store",
   });
   if (!response.ok) {

@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { DeactivateButton } from "../../components/DeactivateButton";
+import { apiUrl } from "../../lib/api";
 import { Endpoint } from "../../lib/types";
 import { DATA_CHANGED_EVENT } from "../../lib/refresh";
 
 async function fetchEndpoints(): Promise<Endpoint[]> {
-  const response = await fetch("/api/endpoints", {
+  const response = await fetch(apiUrl("/endpoints"), {
     cache: "no-store",
   });
   if (!response.ok) {
