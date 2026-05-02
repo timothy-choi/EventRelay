@@ -1,0 +1,3 @@
+module.exports=[57113,a=>{"use strict";var b=a.i(87924),c=a.i(50944),d=a.i(72131);a.s(["AutoRefresh",0,function({intervalMs:a=5e3,label:e="Auto-refreshing every 5s"}){let f=(0,c.useRouter)(),[g,h]=(0,d.useState)(!0);return(0,d.useEffect)(()=>{if(!g)return;let b=window.setInterval(()=>{f.refresh()},a);return()=>window.clearInterval(b)},[g,a,f]),(0,b.jsxs)("div",{className:"refresh-bar",children:[(0,b.jsx)("span",{className:"muted",children:g?e:"Auto-refresh paused"}),(0,b.jsx)("button",{className:"button",onClick:()=>h(a=>!a),children:g?"Pause":"Resume"})]})}])}];
+
+//# sourceMappingURL=components_AutoRefresh_tsx_13ay8b0._.js.map

@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/deliveries/[id]/replay/route": "/api/deliveries/[id]/replay",
+  "/api/deliveries/route": "/api/deliveries",
+  "/api/endpoints/[id]/deactivate/route": "/api/endpoints/[id]/deactivate",
+  "/api/endpoints/[id]/stats/route": "/api/endpoints/[id]/stats",
+  "/api/endpoints/route": "/api/endpoints",
+  "/api/system/stats/route": "/api/system/stats",
+  "/api/test-webhooks/route": "/api/test-webhooks",
+  "/deliveries/[id]/page": "/deliveries/[id]",
+  "/deliveries/page": "/deliveries",
+  "/endpoints/[id]/page": "/endpoints/[id]",
+  "/endpoints/page": "/endpoints",
+  "/page": "/",
+  "/test-webhooks/page": "/test-webhooks"
+}

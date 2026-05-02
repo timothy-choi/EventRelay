@@ -1,0 +1,1 @@
+{"version":3,"sources":["../../../../app/deliveries/loading.tsx"],"sourcesContent":["export default function Loading() {\n  return <div className=\"card muted\">Loading deliveries...</div>;\n}\n"],"names":["Loading","className"],"mappings":"wEAAe,SAASA,EACtB,MAAO,CAAA,EAAA,EAAA,GAAA,EAAC,MAAA,CAAIC,UAAU,sBAAa,yBACrC"}

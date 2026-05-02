@@ -1,0 +1,17 @@
+{
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/deliveries/[id]/replay/route": "app/api/deliveries/[id]/replay/route.js",
+  "/api/deliveries/route": "app/api/deliveries/route.js",
+  "/api/endpoints/[id]/deactivate/route": "app/api/endpoints/[id]/deactivate/route.js",
+  "/api/endpoints/[id]/stats/route": "app/api/endpoints/[id]/stats/route.js",
+  "/api/endpoints/route": "app/api/endpoints/route.js",
+  "/api/system/stats/route": "app/api/system/stats/route.js",
+  "/api/test-webhooks/route": "app/api/test-webhooks/route.js",
+  "/deliveries/[id]/page": "app/deliveries/[id]/page.js",
+  "/deliveries/page": "app/deliveries/page.js",
+  "/endpoints/[id]/page": "app/endpoints/[id]/page.js",
+  "/endpoints/page": "app/endpoints/page.js",
+  "/page": "app/page.js",
+  "/test-webhooks/page": "app/test-webhooks/page.js"
+}

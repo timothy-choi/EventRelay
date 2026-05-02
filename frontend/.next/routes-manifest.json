@@ -1,0 +1,146 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/deliveries/[id]/replay",
+      "regex": "^/api/deliveries/([^/]+?)/replay(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/deliveries/(?<nxtPid>[^/]+?)/replay(?:/)?$"
+    },
+    {
+      "page": "/api/endpoints/[id]/deactivate",
+      "regex": "^/api/endpoints/([^/]+?)/deactivate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/endpoints/(?<nxtPid>[^/]+?)/deactivate(?:/)?$"
+    },
+    {
+      "page": "/api/endpoints/[id]/stats",
+      "regex": "^/api/endpoints/([^/]+?)/stats(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/endpoints/(?<nxtPid>[^/]+?)/stats(?:/)?$"
+    },
+    {
+      "page": "/deliveries/[id]",
+      "regex": "^/deliveries/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/deliveries/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/endpoints/[id]",
+      "regex": "^/endpoints/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/endpoints/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/api/deliveries",
+      "regex": "^/api/deliveries(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/deliveries(?:/)?$"
+    },
+    {
+      "page": "/api/endpoints",
+      "regex": "^/api/endpoints(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/endpoints(?:/)?$"
+    },
+    {
+      "page": "/api/system/stats",
+      "regex": "^/api/system/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/system/stats(?:/)?$"
+    },
+    {
+      "page": "/api/test-webhooks",
+      "regex": "^/api/test\\-webhooks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/test\\-webhooks(?:/)?$"
+    },
+    {
+      "page": "/deliveries",
+      "regex": "^/deliveries(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/deliveries(?:/)?$"
+    },
+    {
+      "page": "/endpoints",
+      "regex": "^/endpoints(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/endpoints(?:/)?$"
+    },
+    {
+      "page": "/test-webhooks",
+      "regex": "^/test\\-webhooks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/test\\-webhooks(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}
