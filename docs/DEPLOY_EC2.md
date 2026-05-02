@@ -86,8 +86,7 @@ USE_NETWORK_PROXY=true
 NETWORK_PROXY_URL=http://proxy:8080/proxy
 PUBLIC_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api
 NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api
-CORS_ALLOW_ORIGINS=http://localhost:3000,https://eventrelay.vercel.app
-CORS_ALLOW_ORIGIN_REGEX=https://.*\.vercel\.app
+CORS_ALLOW_ORIGINS=http://localhost:3000,https://event-relay-v1.vercel.app
 ```
 
 `PUBLIC_BASE_URL` controls built-in receiver URLs returned by the API. `NEXT_PUBLIC_API_BASE_URL` controls frontend API requests.

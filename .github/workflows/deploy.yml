@@ -101,8 +101,7 @@ jobs:
             NETWORK_PROXY_URL=http://proxy:8080/proxy
             PUBLIC_BASE_URL=${api_base_url}
             NEXT_PUBLIC_API_BASE_URL=${api_base_url}
-            CORS_ALLOW_ORIGINS=http://localhost:3000,https://eventrelay.vercel.app
-            CORS_ALLOW_ORIGIN_REGEX=https://.*\.vercel\.app
+            CORS_ALLOW_ORIGINS=http://localhost:3000,https://event-relay-v1.vercel.app
             EOF
 
             docker compose -f docker-compose.prod.yml up -d --build || {
