@@ -68,7 +68,7 @@ EventRelay can run publicly on a single Ubuntu EC2 instance with Docker Compose 
 
 The EC2 deployment exposes the backend through Caddy:
 
-- Backend API: `https://eventrelay.44-222-242-148.sslip.io/api`
+- Backend API: `https://eventrelay.44-205-43-161.sslip.io/api`
 
 Caddy handles the HTTPS reverse proxy and automatic certificates once the sslip.io hostname resolves to the instance and the EC2 security group allows inbound `80` and `443`.
 
@@ -83,7 +83,7 @@ In Vercel:
 - Import the GitHub repo.
 - Set Root Directory to `frontend`.
 - Use Framework Preset `Next.js`.
-- Add environment variable `NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api`.
+- Add environment variable `NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api`.
 
 The EC2/Caddy deployment must keep this route so the Vercel app can reach the backend:
 
@@ -106,13 +106,13 @@ After deploying to Vercel:
 
 ```bash
 curl -I https://YOUR-VERCEL-APP.vercel.app
-curl -I https://eventrelay.44-222-242-148.sslip.io/api/health
+curl -I https://eventrelay.44-205-43-161.sslip.io/api/health
 ```
 
 Check for accidental frontend hardcoded API URLs:
 
 ```bash
-grep -R "localhost:8000\|eventrelay.freeddns.org\|44-222-242-148.sslip.io" -n frontend || true
+grep -R "localhost:8000\|eventrelay.freeddns.org\|44-205-43-161.sslip.io" -n frontend || true
 ```
 
 ## Demo
@@ -348,8 +348,8 @@ Run it against a deployed instance:
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api \
-FRONTEND_BASE_URL=https://eventrelay.44-222-242-148.sslip.io \
+API_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api \
+FRONTEND_BASE_URL=https://eventrelay.44-205-43-161.sslip.io \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```

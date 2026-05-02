@@ -35,8 +35,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          echo "api_base_url=https://eventrelay.44-222-242-148.sslip.io/api" >> "$GITHUB_OUTPUT"
-          echo "frontend_base_url=https://eventrelay.44-222-242-148.sslip.io" >> "$GITHUB_OUTPUT"
+          echo "api_base_url=https://eventrelay.44-205-43-161.sslip.io/api" >> "$GITHUB_OUTPUT"
+          echo "frontend_base_url=https://eventrelay.44-205-43-161.sslip.io" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials
         if: env.EC2_SSH_SECURITY_GROUP_ID != '' && env.AWS_ROLE_TO_ASSUME != ''
@@ -88,9 +88,9 @@ jobs:
             git reset --hard origin/main
             chmod +x scripts/render_caddyfile.sh scripts/full_app_smoke_test.sh
 
-            export EVENTRELAY_HOST="eventrelay.44-222-242-148.sslip.io"
-            api_base_url="https://eventrelay.44-222-242-148.sslip.io/api"
-            frontend_base_url="https://eventrelay.44-222-242-148.sslip.io"
+            export EVENTRELAY_HOST="eventrelay.44-205-43-161.sslip.io"
+            api_base_url="https://eventrelay.44-205-43-161.sslip.io/api"
+            frontend_base_url="https://eventrelay.44-205-43-161.sslip.io"
 
             ./scripts/render_caddyfile.sh
 

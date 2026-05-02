@@ -1,4 +1,4 @@
-eventrelay.44-222-242-148.sslip.io {
+eventrelay.44-205-43-161.sslip.io {
     encode gzip zstd
 
     handle /api/* {

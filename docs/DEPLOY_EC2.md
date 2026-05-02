@@ -2,9 +2,9 @@
 
 This guide deploys EventRelay backend services on a single Ubuntu EC2 instance with Docker Compose, Caddy, and a free sslip.io hostname:
 
-- Backend API: `https://eventrelay.44-222-242-148.sslip.io/api`
+- Backend API: `https://eventrelay.44-205-43-161.sslip.io/api`
 
-Caddy can issue automatic HTTPS certificates only after this hostname resolves to the EC2 public IP and inbound ports `80` and `443` are open. The frontend can be deployed separately on Vercel with `NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api`.
+Caddy can issue automatic HTTPS certificates only after this hostname resolves to the EC2 public IP and inbound ports `80` and `443` are open. The frontend can be deployed separately on Vercel with `NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api`.
 
 ## 1. Launch Ubuntu EC2
 
@@ -67,7 +67,7 @@ Render the Caddyfile for the public hostname:
 ./scripts/render_caddyfile.sh
 ```
 
-The script defaults to `eventrelay.44-222-242-148.sslip.io` and writes `Caddyfile` from `Caddyfile.template`.
+The script defaults to `eventrelay.44-205-43-161.sslip.io` and writes `Caddyfile` from `Caddyfile.template`.
 
 ## 6. Create `.env`
 
@@ -84,8 +84,8 @@ DATABASE_URL=postgresql+psycopg://postgres:postgres@postgres:5432/eventrelay
 REDIS_URL=redis://redis:6379/0
 USE_NETWORK_PROXY=true
 NETWORK_PROXY_URL=http://proxy:8080/proxy
-PUBLIC_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api
-NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api
+PUBLIC_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api
+NEXT_PUBLIC_API_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api
 CORS_ALLOW_ORIGINS=http://localhost:3000,https://eventrelay.vercel.app
 CORS_ALLOW_ORIGIN_REGEX=https://.*\.vercel\.app
 ```
@@ -105,12 +105,12 @@ docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs caddy --tail=100
 ```
 
-If Caddy cannot get certificates, confirm that `eventrelay.44-222-242-148.sslip.io` resolves to the EC2 public IP and the security group allows inbound `80` and `443`.
+If Caddy cannot get certificates, confirm that `eventrelay.44-205-43-161.sslip.io` resolves to the EC2 public IP and the security group allows inbound `80` and `443`.
 
 ## 8. Verify Backend Health
 
 ```bash
-curl -fsS https://eventrelay.44-222-242-148.sslip.io/api/health
+curl -fsS https://eventrelay.44-205-43-161.sslip.io/api/health
 ```
 
 Expected response:
@@ -124,21 +124,21 @@ Expected response:
 Open:
 
 ```text
-https://eventrelay.44-222-242-148.sslip.io
+https://eventrelay.44-205-43-161.sslip.io
 ```
 
 Or check from the terminal:
 
 ```bash
-curl -I https://eventrelay.44-222-242-148.sslip.io
+curl -I https://eventrelay.44-205-43-161.sslip.io
 ```
 
 ## 10. Run Smoke Test Against EC2
 
 ```bash
 START_COMPOSE=false \
-API_BASE_URL=https://eventrelay.44-222-242-148.sslip.io/api \
-FRONTEND_BASE_URL=https://eventrelay.44-222-242-148.sslip.io \
+API_BASE_URL=https://eventrelay.44-205-43-161.sslip.io/api \
+FRONTEND_BASE_URL=https://eventrelay.44-205-43-161.sslip.io \
 RECEIVER_TARGET_BASE_URL=http://backend:8000 \
 ./scripts/full_app_smoke_test.sh
 ```
