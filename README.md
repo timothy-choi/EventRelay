@@ -112,7 +112,7 @@ curl -I https://eventrelay.44-205-43-161.sslip.io/api/health
 Check for accidental frontend hardcoded API URLs:
 
 ```bash
-grep -R "localhost:8000\|eventrelay.freeddns.org\|44-205-43-161.sslip.io" -n frontend || true
+grep -R "localhost:8000\|44-205-43-161.sslip.io" -n frontend || true
 ```
 
 ## Demo

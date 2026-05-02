@@ -104,7 +104,7 @@ services:
         condition: service_healthy
 
   caddy:
-    image: caddy:2-alpine
+    image: caddy:2
     ports:
       - "80:80"
       - "443:443"
@@ -112,6 +112,9 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
     depends_on:
       frontend:
         condition: service_healthy
